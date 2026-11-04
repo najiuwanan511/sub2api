@@ -30,7 +30,7 @@
 
     <!-- Switch back to the modern style from the classic shell -->
     <div class="fixed bottom-4 right-4 z-[60]">
-      <UiStyleToggle />
+      <UiStyleToggle pinned />
     </div>
   </div>
 </template>

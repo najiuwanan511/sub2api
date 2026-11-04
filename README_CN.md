@@ -17,6 +17,13 @@
 - 主题变量见 `docs/design-system.md`，其余功能、部署、配置均沿用上游文档；
 - 后端、计价、API 行为不在本分支改动。
 
+> **注意：装主题版不要直接跑上游一键脚本。**
+> 下面的一键脚本、Docker 部署命令已改成你自己的 fork 分支地址，但 fork 目前没有发过 Release，
+> 所以脚本装法会在“下载 Release 包”那一步失败；Docker 官方镜像 `weishaw/sub2api:latest` 里也没有这个主题。
+> 带主题能真正跑通的装法是源码装：先 `git clone -b theme/money-tile` 本 fork，再按源码构建/部署章节走。
+> 要让一键脚本也跑通，下一步是给 fork 发一个带构建产物的 Release。
+
+
 ## 来源与许可
 
 - 上游：Wei-Shaw/sub2api，LGPL-3.0，原始版权归上游作者所有；
@@ -113,7 +120,7 @@ fast_mode = true
 #### 安装步骤
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/theme/money-tile/deploy/install.sh | sudo bash
 ```
 
 脚本会自动：
@@ -163,7 +170,7 @@ sudo journalctl -u sub2api -f
 sudo systemctl restart sub2api
 
 # 卸载
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/theme/money-tile/deploy/install.sh | sudo bash -s -- uninstall -y
 ```
 
 ---
@@ -186,7 +193,7 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 mkdir -p sub2api-deploy && cd sub2api-deploy
 
 # 下载并运行部署准备脚本
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/docker-deploy.sh | bash
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/theme/money-tile/deploy/docker-deploy.sh | bash
 
 # 启动服务
 docker compose up -d
@@ -208,7 +215,7 @@ docker compose logs -f sub2api
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone -b theme/money-tile https://github.com/najiuwanan511/sub2api.git
 cd sub2api/deploy
 
 # 2. 复制环境配置文件
@@ -352,7 +359,7 @@ rm -rf data/ postgres_data/ redis_data/
 Apple 芯片 Mac 在 macOS 26 上可使用 Apple `container` 1.1.0 或更高版本运行完整的 Sub2API、PostgreSQL 和 Redis：
 
 ```bash
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone -b theme/money-tile https://github.com/najiuwanan511/sub2api.git
 cd sub2api/deploy
 ./apple-container.sh init
 ./apple-container.sh up
@@ -378,7 +385,7 @@ cd sub2api/deploy
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone -b theme/money-tile https://github.com/najiuwanan511/sub2api.git
 cd sub2api
 
 # 2. 安装 pnpm（如果还没有安装）

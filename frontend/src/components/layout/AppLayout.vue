@@ -1,6 +1,9 @@
 <template>
   <!-- DESIGN_1 modern shell: flat Money Tile layout. Classic keeps the
-       original markup below unchanged. -->
+       original markup below unchanged, plus a pinned toggle so the user
+       can always switch back to the modern style (the modern sidebar is
+       not mounted in classic mode, so without this button there would be
+       no way back). -->
   <ModernLayout v-if="isModern">
     <slot />
   </ModernLayout>
@@ -24,6 +27,11 @@
         <slot />
       </main>
     </div>
+
+    <!-- Switch back to the modern style from the classic shell -->
+    <div class="fixed bottom-4 right-4 z-[60]">
+      <UiStyleToggle />
+    </div>
   </div>
 </template>
 
@@ -37,6 +45,7 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
 import ModernLayout from './modern/ModernLayout.vue'
+import UiStyleToggle from './modern/UiStyleToggle.vue'
 import { getUiStyle } from '@/utils/uiStyle'
 
 const isModern = getUiStyle() === 'modern'

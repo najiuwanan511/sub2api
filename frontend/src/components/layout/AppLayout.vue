@@ -1,5 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-dark-950">
+  <!-- DESIGN_1 modern shell: flat Money Tile layout. Classic keeps the
+       original markup below unchanged. -->
+  <ModernLayout v-if="isModern">
+    <slot />
+  </ModernLayout>
+  <div v-else class="min-h-screen bg-gray-50 dark:bg-dark-950">
     <!-- Background Decoration -->
     <div class="pointer-events-none fixed inset-0 bg-mesh-gradient"></div>
 
@@ -31,7 +36,10 @@ import { useOnboardingTour } from '@/composables/useOnboardingTour'
 import { useOnboardingStore } from '@/stores/onboarding'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
+import ModernLayout from './modern/ModernLayout.vue'
+import { getUiStyle } from '@/utils/uiStyle'
 
+const isModern = getUiStyle() === 'modern'
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)

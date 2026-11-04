@@ -5,6 +5,39 @@ export default {
   theme: {
     extend: {
       colors: {
+        // DESIGN_1 semantic colours (additive only; classic keeps
+        // primary/accent/dark below). Values are CSS variables so the
+        // modern/classic token sets in design-tokens.css drive them.
+        money: {
+          DEFAULT: 'rgb(var(--c-money) / <alpha-value>)',
+          hover: 'rgb(var(--c-money-hover) / <alpha-value>)',
+          ink: 'rgb(var(--c-money-ink) / <alpha-value>)',
+          dim: 'rgb(var(--c-money-dim) / <alpha-value>)',
+          text: 'rgb(var(--c-money-text) / <alpha-value>)'
+        },
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        tile: 'rgb(var(--c-tile) / <alpha-value>)',
+        'tile-2': 'rgb(var(--c-tile-2) / <alpha-value>)',
+        ink: {
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+          2: 'rgb(var(--c-ink-2) / <alpha-value>)',
+          3: 'rgb(var(--c-ink-3) / <alpha-value>)'
+        },
+        rule: 'rgb(var(--c-rule) / <alpha-value>)',
+        ok: 'rgb(var(--c-ok) / <alpha-value>)',
+        warn: 'rgb(var(--c-warn) / <alpha-value>)',
+        bad: 'rgb(var(--c-bad) / <alpha-value>)',
+        series: {
+          1: 'rgb(var(--c-series-1) / <alpha-value>)',
+          2: 'rgb(var(--c-series-2) / <alpha-value>)',
+          3: 'rgb(var(--c-series-3) / <alpha-value>)',
+          4: 'rgb(var(--c-series-4) / <alpha-value>)',
+          5: 'rgb(var(--c-series-5) / <alpha-value>)'
+        },
+        chart: {
+          bar: 'rgb(var(--c-chart-bar) / <alpha-value>)',
+          line: 'rgb(var(--c-chart-line) / <alpha-value>)'
+        },
         // 主色调 - Teal/Cyan 青色系
         primary: {
           50: '#f0fdfa',
@@ -50,6 +83,10 @@ export default {
       },
       fontFamily: {
         sans: [
+          // DESIGN_1: Anthropic Sans is referenced first; the font files
+          // are NOT shipped in this branch (see docs/design-system.md),
+          // so system fallbacks render until they are added.
+          'Anthropic Sans',
           'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',

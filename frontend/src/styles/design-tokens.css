@@ -1,0 +1,382 @@
+/*
+ * DESIGN_1 design tokens — Money Tile design system for Sub2API.
+ * New in the theme/money-tile branch. Loaded after style.css (see main.ts).
+ *
+ * All colours are stored as RGB triplets in --c-* variables so Tailwind
+ * opacity modifiers keep working: rgb(var(--c-money) / <alpha-value>).
+ *
+ * Scoping rule (spec: Semantic First / Flat Rule):
+ * - :root / html.dark define the NEW (modern) tokens.
+ * - html[data-ui="classic"] overrides them with the upstream palette, so
+ *   semantic classes still render in classic mode.
+ * - Flat overrides (0px radius, no shadows/gradients/glass) are scoped to
+ *   html:not([data-ui="classic"]) ONLY, so classic is never restyled.
+ */
+
+/* ---------- Modern tokens: light ---------- */
+:root {
+  --c-surface: 255 255 255;
+  --c-tile: 241 242 240;
+  --c-tile-2: 230 232 228;
+  --c-ink: 10 11 10;
+  --c-ink-2: 70 74 70;
+  --c-ink-3: 106 111 106;
+  --c-rule: 223 225 221;
+  --c-money: 0 112 60;
+  --c-money-hover: 0 92 49;
+  --c-money-ink: 255 255 255;
+  --c-money-dim: 191 230 207;
+  --c-money-text: 0 112 60;
+  --c-ok: 0 112 60;
+  --c-warn: 162 75 0;
+  --c-bad: 180 0 42;
+  --c-series-1: 0 112 60;
+  --c-series-2: 0 80 180;
+  --c-series-3: 162 75 0;
+  --c-series-4: 138 28 156;
+  --c-series-5: 106 111 106;
+  --c-chart-bar: 10 11 10;
+  --c-chart-line: 0 168 90;
+  --c-primary-50: 232 246 238;
+  --c-primary-100: 201 235 215;
+  --c-primary-200: 151 216 178;
+  --c-primary-300: 94 194 137;
+  --c-primary-400: 46 168 102;
+  --c-primary-500: 0 135 63;
+  --c-primary-600: 0 112 60;
+  --c-primary-700: 0 92 49;
+  --c-primary-800: 0 74 40;
+  --c-primary-900: 0 59 32;
+  --c-primary-950: 0 34 19;
+}
+
+/* ---------- Modern tokens: dark ---------- */
+html.dark {
+  --c-surface: 0 0 0;
+  --c-tile: 20 21 20;
+  --c-tile-2: 29 31 29;
+  --c-ink: 255 255 255;
+  --c-ink-2: 185 190 185;
+  --c-ink-3: 141 147 141;
+  --c-rule: 38 40 38;
+  --c-money: 0 135 63;
+  --c-money-hover: 0 161 76;
+  --c-money-ink: 255 255 255;
+  --c-money-dim: 184 240 207;
+  --c-money-text: 0 161 76;
+  --c-ok: 52 209 122;
+  --c-warn: 255 165 58;
+  --c-bad: 255 107 133;
+  --c-series-1: 52 209 122;
+  --c-series-2: 77 155 255;
+  --c-series-3: 255 165 58;
+  --c-series-4: 224 123 240;
+  --c-series-5: 141 147 141;
+  --c-chart-bar: 231 234 231;
+  --c-chart-line: 52 209 122;
+}
+
+/* ---------- Classic tokens (upstream palette, both themes) ---------- */
+html[data-ui='classic'] {
+  --c-surface: 249 250 251;
+  --c-tile: 255 255 255;
+  --c-tile-2: 243 244 246;
+  --c-ink: 17 24 39;
+  --c-ink-2: 75 85 99;
+  --c-ink-3: 107 114 128;
+  --c-rule: 229 231 235;
+  --c-money: 13 148 136;
+  --c-money-hover: 15 118 110;
+  --c-money-ink: 255 255 255;
+  --c-money-dim: 204 251 241;
+  --c-money-text: 13 148 136;
+  --c-ok: 5 150 105;
+  --c-warn: 217 119 6;
+  --c-bad: 220 38 38;
+  --c-series-1: 59 130 246;
+  --c-series-2: 16 185 129;
+  --c-series-3: 245 158 11;
+  --c-series-4: 239 68 68;
+  --c-series-5: 139 92 246;
+  --c-chart-bar: 59 130 246;
+  --c-chart-line: 16 185 129;
+}
+
+html.dark[data-ui='classic'] {
+  --c-surface: 2 6 23;
+  --c-tile: 30 41 59;
+  --c-tile-2: 51 65 85;
+  --c-ink: 248 250 252;
+  --c-ink-2: 203 213 225;
+  --c-ink-3: 148 163 184;
+  --c-rule: 51 65 85;
+  --c-money: 45 212 191;
+  --c-money-hover: 94 234 212;
+  --c-money-text: 45 212 191;
+  --c-ok: 52 211 153;
+  --c-warn: 251 191 36;
+  --c-bad: 248 113 113;
+}
+
+/* ---------- Semantic utility classes (both styles) ---------- */
+.bg-surface { background-color: rgb(var(--c-surface)); }
+.bg-tile { background-color: rgb(var(--c-tile)); }
+.bg-tile-2 { background-color: rgb(var(--c-tile-2)); }
+.bg-money { background-color: rgb(var(--c-money)); }
+.bg-money-hover:hover { background-color: rgb(var(--c-money-hover)); }
+.text-ink { color: rgb(var(--c-ink)); }
+.text-ink-2 { color: rgb(var(--c-ink-2)); }
+.text-ink-3 { color: rgb(var(--c-ink-3)); }
+.text-money { color: rgb(var(--c-money-text)); }
+.text-ok { color: rgb(var(--c-ok)); }
+.text-warn { color: rgb(var(--c-warn)); }
+.text-bad { color: rgb(var(--c-bad)); }
+.border-rule { border-color: rgb(var(--c-rule)); }
+.series-1 { background-color: rgb(var(--c-series-1)); }
+.series-2 { background-color: rgb(var(--c-series-2)); }
+.series-3 { background-color: rgb(var(--c-series-3)); }
+.series-4 { background-color: rgb(var(--c-series-4)); }
+.series-5 { background-color: rgb(var(--c-series-5)); }
+.chart-bar { color: rgb(var(--c-chart-bar)); }
+.chart-line { color: rgb(var(--c-chart-line)); }
+
+/* ---------- Modern-only: typography, tiles, buttons, controls ---------- */
+html:not([data-ui='classic']) body {
+  font-variant-numeric: tabular-nums;
+}
+
+html:not([data-ui='classic']) .display {
+  font-size: 54px; font-weight: 300; line-height: 1.08; letter-spacing: -0.035em;
+}
+html:not([data-ui='classic']) .headline {
+  font-size: 30px; font-weight: 300; line-height: 1; letter-spacing: -0.02em;
+}
+html:not([data-ui='classic']) .metric {
+  font-size: 40px; font-weight: 300; line-height: 1; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+html:not([data-ui='classic']) .page-title {
+  font-size: 30px; font-weight: 300; line-height: 1; letter-spacing: -0.02em;
+}
+@media (max-width: 640px) {
+  html:not([data-ui='classic']) .display { font-size: 40px; }
+  html:not([data-ui='classic']) .headline,
+  html:not([data-ui='classic']) .page-title { font-size: 26px; }
+  html:not([data-ui='classic']) .metric { font-size: 30px; }
+}
+
+html:not([data-ui='classic']) .tile {
+  background-color: rgb(var(--c-tile));
+  color: rgb(var(--c-ink));
+  border-radius: 0;
+  padding: 18px 20px;
+}
+html:not([data-ui='classic']) .tile-money {
+  background-color: rgb(var(--c-money));
+  color: rgb(var(--c-money-ink));
+  border-radius: 0;
+  padding: 18px 20px;
+}
+html:not([data-ui='classic']) .tile-grid {
+  display: grid;
+  gap: 8px;
+}
+html:not([data-ui='classic']) .card,
+html:not([data-ui='classic']) .glass-card {
+  background-color: rgb(var(--c-tile));
+  border-radius: 0;
+  box-shadow: none;
+  background-image: none;
+}
+html:not([data-ui='classic']) .card-hover:hover {
+  background-color: rgb(var(--c-tile-2));
+}
+
+/* Modern buttons: flat, 40px, 0px radius, at most one money button per area. */
+html:not([data-ui='classic']) .btn {
+  border-radius: 0;
+  height: 40px;
+  padding: 10px 16px;
+  box-shadow: none;
+  background-image: none;
+  transition: background-color 150ms, color 150ms;
+}
+html:not([data-ui='classic']) .btn:active { transform: scale(0.985); }
+html:not([data-ui='classic']) .btn-primary {
+  background-color: rgb(var(--c-money));
+  color: rgb(var(--c-money-ink));
+  background-image: none;
+  box-shadow: none;
+}
+html:not([data-ui='classic']) .btn-primary:hover {
+  background-color: rgb(var(--c-money-hover));
+  background-image: none;
+  box-shadow: none;
+}
+html:not([data-ui='classic']) .btn-solid {
+  background-color: rgb(var(--c-ink));
+  color: rgb(var(--c-surface));
+}
+html:not([data-ui='classic']) .btn-secondary {
+  background-color: rgb(var(--c-tile));
+  color: rgb(var(--c-ink));
+  border: 1px solid rgb(var(--c-rule));
+  box-shadow: none;
+}
+html:not([data-ui='classic']) .btn-secondary:hover {
+  background-color: rgb(var(--c-tile-2));
+}
+html:not([data-ui='classic']) .btn-ghost {
+  background-color: transparent;
+  color: rgb(var(--c-ink-2));
+}
+html:not([data-ui='classic']) .btn-ghost:hover {
+  background-color: rgb(var(--c-tile));
+  color: rgb(var(--c-ink));
+}
+html:not([data-ui='classic']) .btn-danger {
+  background-color: rgb(var(--c-bad));
+  color: #fff;
+  background-image: none;
+  box-shadow: none;
+}
+html:not([data-ui='classic']) .btn-danger:hover { background-color: #8f0021; }
+
+/* Modern inputs / switch / segmented control / tabs / badges / progress. */
+html:not([data-ui='classic']) .input {
+  background-color: rgb(var(--c-surface));
+  color: rgb(var(--c-ink));
+  border-radius: 0;
+  height: 40px;
+  padding: 8px 12px;
+  border: 2px solid rgb(var(--c-rule));
+}
+html:not([data-ui='classic']) .input:focus {
+  border-color: rgb(var(--c-money));
+  outline: none;
+  box-shadow: none;
+}
+html:not([data-ui='classic']) .switch {
+  width: 44px; height: 24px; border-radius: 0;
+}
+html:not([data-ui='classic']) .switch span {
+  width: 20px; height: 20px; border-radius: 0;
+}
+html:not([data-ui='classic']) .tab {
+  background-color: rgb(var(--c-tile));
+  color: rgb(var(--c-ink-2));
+  border-radius: 0;
+  height: 36px;
+  padding: 0 16px;
+}
+html:not([data-ui='classic']) .tab-active,
+html:not([data-ui='classic']) .segment-active {
+  background-color: rgb(var(--c-money));
+  color: rgb(var(--c-money-ink));
+  border-radius: 0;
+  height: 36px;
+  padding: 0 16px;
+}
+html:not([data-ui='classic']) .segment-idle {
+  background-color: rgb(var(--c-tile));
+  color: rgb(var(--c-ink-2));
+  border-radius: 0;
+  height: 36px;
+  padding: 0 16px;
+}
+html:not([data-ui='classic']) .badge-gray {
+  background-color: rgb(var(--c-tile-2));
+  color: rgb(var(--c-ink-2));
+  border-radius: 0;
+  padding: 2px 8px;
+}
+html:not([data-ui='classic']) .progress {
+  height: 8px;
+  background-color: rgb(var(--c-tile-2));
+  border-radius: 0;
+}
+html:not([data-ui='classic']) .progress > * {
+  background-color: rgb(var(--c-money));
+  border-radius: 0;
+}
+
+/* Modern toast: solid inverse block, no left colour stripe (spec). */
+html:not([data-ui='classic']) .toast {
+  background-color: rgb(var(--c-ink));
+  color: rgb(var(--c-surface));
+  border-radius: 0;
+  padding: 16px;
+  min-width: 320px;
+  border: none;
+  box-shadow: none;
+}
+
+/* Modern flat mappings: radius, shadows, gradients, glass. */
+html:not([data-ui='classic']) .rounded,
+html:not([data-ui='classic']) .rounded-md,
+html:not([data-ui='classic']) .rounded-lg,
+html:not([data-ui='classic']) .rounded-xl,
+html:not([data-ui='classic']) .rounded-2xl,
+html:not([data-ui='classic']) .rounded-3xl,
+html:not([data-ui='classic']) .rounded-4xl {
+  border-radius: 0 !important;
+}
+html:not([data-ui='classic']) .rounded-sm { border-radius: 2px !important; }
+/* rounded-full is intentionally NOT flattened: spec keeps it for spinners
+   and status dots only. */
+html:not([data-ui='classic']) .shadow-sm,
+html:not([data-ui='classic']) .shadow,
+html:not([data-ui='classic']) .shadow-md,
+html:not([data-ui='classic']) .shadow-card,
+html:not([data-ui='classic']) .shadow-glass,
+html:not([data-ui='classic']) .shadow-glow {
+  box-shadow: none !important;
+}
+html:not([data-ui='classic']) .shadow-lg,
+html:not([data-ui='classic']) .shadow-xl,
+html:not([data-ui='classic']) .shadow-2xl {
+  box-shadow: 0 0 0 1px rgb(var(--c-rule)) !important;
+}
+html:not([data-ui='classic']) .bg-gradient-to-r,
+html:not([data-ui='classic']) .bg-gradient-to-br,
+html:not([data-ui='classic']) .bg-mesh-gradient {
+  background-image: none !important;
+}
+html:not([data-ui='classic']) .backdrop-blur,
+html:not([data-ui='classic']) .backdrop-blur-sm {
+  backdrop-filter: none !important;
+}
+
+/* Modern focus, selection, caret, scrollbar. */
+html:not([data-ui='classic']) :focus-visible {
+  outline: 3px solid rgb(var(--c-money-hover));
+  outline-offset: 2px;
+}
+html:not([data-ui='classic']) ::selection {
+  background-color: rgb(var(--c-money));
+  color: rgb(var(--c-money-ink));
+}
+html:not([data-ui='classic']) input,
+html:not([data-ui='classic']) textarea {
+  caret-color: rgb(var(--c-money));
+}
+html:not([data-ui='classic']) ::-webkit-scrollbar-thumb {
+  border-radius: 0 !important;
+}
+
+/* Modern motion: tile glide on first load, reduced-motion respected. */
+html:not([data-ui='classic']) .tile-glide {
+  animation: tile-glide 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  animation-delay: calc(var(--n, 0) * 55ms);
+}
+@keyframes tile-glide {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-ui='classic']) .tile-glide,
+  html:not([data-ui='classic']) * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

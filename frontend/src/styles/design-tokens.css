@@ -380,3 +380,90 @@ html:not([data-ui='classic']) .tile-glide {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Modern additions: shell + deviation-list flattening ---------- */
+
+/* Topbar: no glass, no blur (deviation list: backdrop-blur). */
+html:not([data-ui='classic']) .glass {
+  background-color: rgb(var(--c-surface));
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* Topbar balance pill: money solid block, money-ink text (classic header,
+   shared by users and admins). */
+html:not([data-ui='classic']) .balance-pill {
+  background-color: rgb(var(--c-money)) !important;
+  border-radius: 0 !important;
+  height: 40px;
+}
+html:not([data-ui='classic']) .balance-pill,
+html:not([data-ui='classic']) .balance-pill * {
+  color: rgb(var(--c-money-ink)) !important;
+}
+html:not([data-ui='classic']) .balance-pill:hover {
+  background-color: rgb(var(--c-money-hover)) !important;
+}
+
+/* Balance hover card: inverse solid block (text-only overlay, spec). */
+html:not([data-ui='classic']) .balance-card {
+  background-color: rgb(var(--c-ink)) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+html:not([data-ui='classic']) .balance-card,
+html:not([data-ui='classic']) .balance-card * {
+  color: rgb(var(--c-surface)) !important;
+}
+html:not([data-ui='classic']) .balance-card * {
+  border-color: rgb(var(--c-surface) / 0.2) !important;
+}
+
+/* Header avatar: square, inverse solid (no gradient, no shadow). */
+html:not([data-ui='classic']) .header-avatar {
+  border-radius: 0 !important;
+  background-color: rgb(var(--c-ink)) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: rgb(var(--c-surface)) !important;
+}
+
+/* Admin shell (upstream sidebar kept for admins): active item becomes
+   bold money-text without a tinted background. */
+html:not([data-ui='classic']) .sidebar-link-active {
+  color: rgb(var(--c-money-text)) !important;
+  font-weight: 600;
+  background-color: transparent !important;
+}
+
+/* Remaining gradient directions + blur glow blobs: none in modern mode. */
+html:not([data-ui='classic']) .bg-gradient-to-t,
+html:not([data-ui='classic']) .bg-gradient-to-b,
+html:not([data-ui='classic']) .bg-gradient-to-l,
+html:not([data-ui='classic']) .bg-gradient-to-tl,
+html:not([data-ui='classic']) .bg-gradient-to-tr,
+html:not([data-ui='classic']) .bg-gradient-to-bl {
+  background-image: none !important;
+}
+html:not([data-ui='classic']) .blur-3xl,
+html:not([data-ui='classic']) .blur-2xl,
+html:not([data-ui='classic']) .blur-xl {
+  display: none !important;
+}
+html:not([data-ui='classic']) .backdrop-blur-md,
+html:not([data-ui='classic']) .backdrop-blur-lg,
+html:not([data-ui='classic']) .backdrop-blur-xl,
+html:not([data-ui='classic']) .backdrop-blur-2xl,
+html:not([data-ui='classic']) .backdrop-blur-3xl {
+  backdrop-filter: none !important;
+}
+
+/* DataTable scrollbar: flat square scrollbar (deviation list: 6px radius). */
+html:not([data-ui='classic']) .table-wrapper::-webkit-scrollbar,
+html:not([data-ui='classic']) .table-wrapper::-webkit-scrollbar-thumb,
+html:not([data-ui='classic']) .table-wrapper::-webkit-scrollbar-track,
+html:not([data-ui='classic']) .table-wrapper::-webkit-scrollbar-corner {
+  border-radius: 0 !important;
+}

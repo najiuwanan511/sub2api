@@ -211,7 +211,9 @@ const toggleBreakdown = async (endpoint: string) => {
   }
 }
 
-const chartColors = [
+// DESIGN_1: in modern mode the palette follows the theme's --c-series-*
+// variables (cycling series-1..5) so the charts match the design system.
+const classicChartColors = [
   '#3b82f6',
   '#10b981',
   '#f59e0b',
@@ -225,6 +227,21 @@ const chartColors = [
   '#06b6d4',
   '#a855f7'
 ]
+function isModernUiStyle(): boolean {
+  return (
+    typeof document !== 'undefined' &&
+    document.documentElement.getAttribute('data-ui') !== 'classic'
+  )
+}
+
+function cssSeriesColor(index: number, fallback: string): string {
+  if (typeof window === 'undefined' || !isModernUiStyle()) return fallback
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(`--c-series-${(index % 5) + 1}`)
+    .trim()
+  return value ? `rgb(${value})` : fallback
+}
+const chartColors = classicChartColors.map((color, i) => cssSeriesColor(i, color))
 
 const displayEndpointStats = computed(() => {
   const sourceStats = props.source === 'upstream'

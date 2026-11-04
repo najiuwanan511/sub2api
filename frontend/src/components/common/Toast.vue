@@ -13,11 +13,15 @@
         leave-from-class="opacity-100 translate-x-0"
         leave-to-class="opacity-0 translate-x-full"
       >
+        <!-- DESIGN_1: the item carries the global .toast class, so modern
+             mode renders the spec inverse solid block (no left colour
+             stripe, no radius, no border); classic keeps the original look
+             via the Tailwind classes below. -->
         <div
           v-for="toast in toasts"
           :key="toast.id"
           :class="[
-            'pointer-events-auto min-w-[320px] max-w-md overflow-hidden rounded-lg shadow-lg',
+            'toast pointer-events-auto min-w-[320px] max-w-md overflow-hidden rounded-lg shadow-lg',
             'bg-white dark:bg-dark-800',
             'border-l-4',
             getBorderColor(toast.type)
@@ -37,12 +41,12 @@
 
               <!-- Content -->
               <div class="min-w-0 flex-1">
-                <p v-if="toast.title" class="text-sm font-semibold text-gray-900 dark:text-white">
+                <p v-if="toast.title" class="toast-title text-sm font-semibold text-gray-900 dark:text-white">
                   {{ toast.title }}
                 </p>
                 <p
                   :class="[
-                    'text-sm leading-relaxed',
+                    'toast-message text-sm leading-relaxed',
                     toast.title
                       ? 'mt-1 text-gray-600 dark:text-gray-300'
                       : 'text-gray-900 dark:text-white'
@@ -55,7 +59,7 @@
               <!-- Close button -->
               <button
                 @click="removeToast(toast.id)"
-                class="-m-1 flex-shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-dark-700 dark:hover:text-gray-300"
+                class="toast-close -m-1 flex-shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-dark-700 dark:hover:text-gray-300"
                 aria-label="Close notification"
               >
                 <Icon name="x" size="sm" />
@@ -64,7 +68,7 @@
           </div>
 
           <!-- Progress bar -->
-          <div v-if="toast.duration" class="h-1 bg-gray-100 dark:bg-dark-700">
+          <div v-if="toast.duration" class="toast-progress-track h-1 bg-gray-100 dark:bg-dark-700">
             <div
               :class="['h-full toast-progress', getProgressBarColor(toast.type)]"
               :style="{ animationDuration: `${toast.duration}ms` }"
@@ -149,5 +153,24 @@ const removeToast = (id: string) => {
   to {
     width: 0%;
   }
+}
+</style>
+
+<!-- DESIGN_1 modern-only toast text colours: the global .toast block is an
+     inverse solid block, so title/message/close switch to surface ink. -->
+<style>
+html:not([data-ui='classic']) .toast .toast-title,
+html:not([data-ui='classic']) .toast .toast-message {
+  color: rgb(var(--c-surface));
+}
+html:not([data-ui='classic']) .toast .toast-close {
+  color: rgb(var(--c-surface) / 0.7);
+}
+html:not([data-ui='classic']) .toast .toast-close:hover {
+  background-color: rgb(var(--c-surface) / 0.15);
+  color: rgb(var(--c-surface));
+}
+html:not([data-ui='classic']) .toast .toast-progress-track {
+  background-color: rgb(var(--c-surface) / 0.2);
 }
 </style>

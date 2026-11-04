@@ -58,15 +58,40 @@ const isDarkMode = computed(() => {
   return document.documentElement.classList.contains('dark')
 })
 
-const chartColors = computed(() => ({
-  text: isDarkMode.value ? '#e5e7eb' : '#374151',
-  grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#3b82f6',
-  output: '#10b981',
-  cacheCreation: '#f59e0b',
-  cacheRead: '#06b6d4',
-  cacheHitRate: '#8b5cf6'
-}))
+function isModernUiStyle(): boolean {
+  return (
+    typeof document !== 'undefined' &&
+    document.documentElement.getAttribute('data-ui') !== 'classic'
+  )
+}
+
+function cssThemeVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined' || !isModernUiStyle()) return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value ? `rgb(${value})` : fallback
+}
+
+const chartColors = computed(() => {
+  const classic = {
+    text: isDarkMode.value ? '#e5e7eb' : '#374151',
+    grid: isDarkMode.value ? '#374151' : '#e5e7eb',
+    input: '#3b82f6',
+    output: '#10b981',
+    cacheCreation: '#f59e0b',
+    cacheRead: '#06b6d4',
+    cacheHitRate: '#8b5cf6'
+  }
+  if (!isModernUiStyle()) return classic
+  return {
+    text: cssThemeVar('--c-ink-2', classic.text),
+    grid: cssThemeVar('--c-rule', classic.grid),
+    input: cssThemeVar('--c-series-2', classic.input),
+    output: cssThemeVar('--c-series-1', classic.output),
+    cacheCreation: cssThemeVar('--c-series-3', classic.cacheCreation),
+    cacheRead: cssThemeVar('--c-series-4', classic.cacheRead),
+    cacheHitRate: cssThemeVar('--c-series-5', classic.cacheHitRate)
+  }
+})
 
 const chartData = computed(() => {
   if (!props.trendData?.length) return null

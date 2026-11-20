@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -60,6 +61,58 @@ func (h *RedeemHandler) Redeem(c *gin.Context) {
 	}
 
 	response.Success(c, dto.RedeemCodeFromService(result).Localized(c.GetHeader("Accept-Language")))
+}
+
+func (h *RedeemHandler) PreviewWalletResetCard(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+	var req RedeemRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.Code) > 128 || strings.TrimSpace(req.Code) == "" {
+		response.BadRequest(c, "Invalid reset card code")
+		return
+	}
+	preview, err := h.redeemService.PreviewWalletResetCard(c.Request.Context(), subject.UserID, strings.TrimSpace(req.Code))
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, preview)
+}
+
+func (h *RedeemHandler) ApplyWalletResetCard(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+	var req RedeemRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.Code) > 128 || strings.TrimSpace(req.Code) == "" {
+		response.BadRequest(c, "Invalid reset card code")
+		return
+	}
+	credit, err := h.redeemService.ApplyWalletResetCard(c.Request.Context(), subject.UserID, strings.TrimSpace(req.Code))
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, credit)
+}
+
+func (h *RedeemHandler) ListWalletResetCredits(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+	credits, err := h.redeemService.ListWalletResetCredits(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, credits)
 }
 
 // GetHistory returns the user's redemption history

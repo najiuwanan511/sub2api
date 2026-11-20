@@ -72,13 +72,28 @@ func NewAlipay(instanceID string, config map[string]string) (*Alipay, error) {
 	}, nil
 }
 
+// ValidateConfig parses the merchant keys locally. It does not create a trade or
+// imply that the merchant has contracted for any Alipay product.
+func (a *Alipay) ValidateConfig() error {
+	if _, err := a.getClient(); err != nil {
+		return infraerrors.BadRequest("ALIPAY_KEYS_INVALID", "Check the application private key and the Alipay platform public key")
+	}
+	for _, field := range []string{"notifyUrl", "returnUrl"} {
+		u, err := url.Parse(strings.TrimSpace(a.config[field]))
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" {
+			return infraerrors.BadRequest("ALIPAY_CALLBACK_INVALID", "Alipay notification and return URLs must use HTTPS")
+		}
+	}
+	return nil
+}
+
 func (a *Alipay) getClient() (*alipay.Client, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.client != nil {
 		return a.client, nil
 	}
-	client, err := alipay.New(a.config["appId"], a.config["privateKey"], true)
+	client, err := alipay.New(strings.TrimSpace(a.config["appId"]), strings.TrimSpace(a.config["privateKey"]), true)
 	if err != nil {
 		return nil, fmt.Errorf("alipay init client: %w", err)
 	}
@@ -89,7 +104,7 @@ func (a *Alipay) getClient() (*alipay.Client, error) {
 	if pubKey == "" {
 		return nil, fmt.Errorf("alipay config missing required key: publicKey (or alipayPublicKey)")
 	}
-	if err := client.LoadAliPayPublicKey(pubKey); err != nil {
+	if err := client.LoadAliPayPublicKey(strings.TrimSpace(pubKey)); err != nil {
 		return nil, fmt.Errorf("alipay load public key: %w", err)
 	}
 	a.client = client

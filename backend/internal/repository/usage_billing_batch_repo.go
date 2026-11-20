@@ -33,7 +33,7 @@ type usageBillingRequestKey struct {
 // 每条命令的去重认领、各项累加与返回结果都与按 cmds 顺序逐条调用 Apply 一致：
 //   - 认领用一条多行 INSERT，未认领的命令按已有指纹判定为重复（Applied=false）或指纹冲突；
 //     认领后在归档表命中的命令同样判定，并删除本事务插入的认领行。
-//   - 同一行的多次累加合并为一条语句，累加值取各命令金额之和。同一事务内 NOW() 不变，
+//   - 除分组钱包按请求顺序结算外，同一行的多次累加合并为一条语句，累加值取各命令金额之和。同一事务内 NOW() 不变，
 //     窗口重置类表达式的合并结果与逐条执行相同。
 //   - 逐条命令的扣费后余额、是否透支、Key 额度是否在该条耗尽、账号额度状态，
 //     由合并语句返回的累加后值按命令顺序推算。
@@ -340,6 +340,22 @@ func applyUsageBillingBatchSubscriptions(ctx context.Context, tx *sql.Tx, cmds [
 }
 
 func applyUsageBillingBatchBalance(ctx context.Context, tx *sql.Tx, userID int64, cmds []*service.UsageBillingCommand, applied []bool, outcomes []service.UsageBillingBatchOutcome) error {
+	// Group-bound credits can be shared by multiple requests in this batch.
+	// Preserve request order if any command can touch a credit; retain the old
+	// aggregated write path for batches without group attribution.
+	for i, cmd := range cmds {
+		if !applied[i] || cmd.WalletGroupID <= 0 || cmd.BalanceCost <= 0 {
+			continue
+		}
+		for j, charge := range cmds {
+			if applied[j] && charge.BalanceCost > 0 {
+				if err := applyWalletBalanceCharge(ctx, tx, charge, outcomes[j].Result); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 	groups, _ := groupUsageBillingAmounts(cmds, applied, func(cmd *service.UsageBillingCommand) (int64, float64, bool) {
 		return userID, cmd.BalanceCost, true
 	})

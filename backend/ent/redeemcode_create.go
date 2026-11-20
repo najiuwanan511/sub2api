@@ -58,6 +58,20 @@ func (_c *RedeemCodeCreate) SetNillableValue(v *float64) *RedeemCodeCreate {
 	return _c
 }
 
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (_c *RedeemCodeCreate) SetResetCapUsd(v float64) *RedeemCodeCreate {
+	_c.mutation.SetResetCapUsd(v)
+	return _c
+}
+
+// SetNillableResetCapUsd sets the "reset_cap_usd" field if the given value is not nil.
+func (_c *RedeemCodeCreate) SetNillableResetCapUsd(v *float64) *RedeemCodeCreate {
+	if v != nil {
+		_c.SetResetCapUsd(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *RedeemCodeCreate) SetStatus(v string) *RedeemCodeCreate {
 	_c.mutation.SetStatus(v)
@@ -237,6 +251,10 @@ func (_c *RedeemCodeCreate) defaults() {
 		v := redeemcode.DefaultValue
 		_c.mutation.SetValue(v)
 	}
+	if _, ok := _c.mutation.ResetCapUsd(); !ok {
+		v := redeemcode.DefaultResetCapUsd
+		_c.mutation.SetResetCapUsd(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := redeemcode.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -271,6 +289,9 @@ func (_c *RedeemCodeCreate) check() error {
 	}
 	if _, ok := _c.mutation.Value(); !ok {
 		return &ValidationError{Name: "value", err: errors.New(`ent: missing required field "RedeemCode.value"`)}
+	}
+	if _, ok := _c.mutation.ResetCapUsd(); !ok {
+		return &ValidationError{Name: "reset_cap_usd", err: errors.New(`ent: missing required field "RedeemCode.reset_cap_usd"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "RedeemCode.status"`)}
@@ -324,6 +345,10 @@ func (_c *RedeemCodeCreate) createSpec() (*RedeemCode, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Value(); ok {
 		_spec.SetField(redeemcode.FieldValue, field.TypeFloat64, value)
 		_node.Value = value
+	}
+	if value, ok := _c.mutation.ResetCapUsd(); ok {
+		_spec.SetField(redeemcode.FieldResetCapUsd, field.TypeFloat64, value)
+		_node.ResetCapUsd = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(redeemcode.FieldStatus, field.TypeString, value)
@@ -474,6 +499,24 @@ func (u *RedeemCodeUpsert) UpdateValue() *RedeemCodeUpsert {
 // AddValue adds v to the "value" field.
 func (u *RedeemCodeUpsert) AddValue(v float64) *RedeemCodeUpsert {
 	u.Add(redeemcode.FieldValue, v)
+	return u
+}
+
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (u *RedeemCodeUpsert) SetResetCapUsd(v float64) *RedeemCodeUpsert {
+	u.Set(redeemcode.FieldResetCapUsd, v)
+	return u
+}
+
+// UpdateResetCapUsd sets the "reset_cap_usd" field to the value that was provided on create.
+func (u *RedeemCodeUpsert) UpdateResetCapUsd() *RedeemCodeUpsert {
+	u.SetExcluded(redeemcode.FieldResetCapUsd)
+	return u
+}
+
+// AddResetCapUsd adds v to the "reset_cap_usd" field.
+func (u *RedeemCodeUpsert) AddResetCapUsd(v float64) *RedeemCodeUpsert {
+	u.Add(redeemcode.FieldResetCapUsd, v)
 	return u
 }
 
@@ -688,6 +731,27 @@ func (u *RedeemCodeUpsertOne) AddValue(v float64) *RedeemCodeUpsertOne {
 func (u *RedeemCodeUpsertOne) UpdateValue() *RedeemCodeUpsertOne {
 	return u.Update(func(s *RedeemCodeUpsert) {
 		s.UpdateValue()
+	})
+}
+
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (u *RedeemCodeUpsertOne) SetResetCapUsd(v float64) *RedeemCodeUpsertOne {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.SetResetCapUsd(v)
+	})
+}
+
+// AddResetCapUsd adds v to the "reset_cap_usd" field.
+func (u *RedeemCodeUpsertOne) AddResetCapUsd(v float64) *RedeemCodeUpsertOne {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.AddResetCapUsd(v)
+	})
+}
+
+// UpdateResetCapUsd sets the "reset_cap_usd" field to the value that was provided on create.
+func (u *RedeemCodeUpsertOne) UpdateResetCapUsd() *RedeemCodeUpsertOne {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.UpdateResetCapUsd()
 	})
 }
 
@@ -1088,6 +1152,27 @@ func (u *RedeemCodeUpsertBulk) AddValue(v float64) *RedeemCodeUpsertBulk {
 func (u *RedeemCodeUpsertBulk) UpdateValue() *RedeemCodeUpsertBulk {
 	return u.Update(func(s *RedeemCodeUpsert) {
 		s.UpdateValue()
+	})
+}
+
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (u *RedeemCodeUpsertBulk) SetResetCapUsd(v float64) *RedeemCodeUpsertBulk {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.SetResetCapUsd(v)
+	})
+}
+
+// AddResetCapUsd adds v to the "reset_cap_usd" field.
+func (u *RedeemCodeUpsertBulk) AddResetCapUsd(v float64) *RedeemCodeUpsertBulk {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.AddResetCapUsd(v)
+	})
+}
+
+// UpdateResetCapUsd sets the "reset_cap_usd" field to the value that was provided on create.
+func (u *RedeemCodeUpsertBulk) UpdateResetCapUsd() *RedeemCodeUpsertBulk {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.UpdateResetCapUsd()
 	})
 }
 

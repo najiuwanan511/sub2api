@@ -240,6 +240,11 @@ export default {
 
     // Redeem Codes
     redeem: {
+      resetPercent: 'Credit rate (%)',
+      resetCap: 'Cap (USD)',
+      resetValidity: 'Credit validity (days)',
+      resetCardHint: 'Based on settled regular wallet spend in this group since the last reset. Redeeming starts a new spend cycle. Temporary credit cannot be refunded or earn more credit.',
+
       title: 'Redeem Code Management',
       description: 'Generate and manage redeem codes',
       generateCodes: 'Generate Codes',
@@ -312,6 +317,7 @@ export default {
       failedToDeleteUnused: 'Failed to delete unused codes',
       failedToCopy: 'Failed to copy codes',
       types: {
+        reset_card: 'Reset card',
         balance: 'Balance',
         concurrency: 'Concurrency',
         subscription: 'Subscription',

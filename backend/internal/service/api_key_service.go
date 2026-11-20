@@ -288,6 +288,15 @@ type RateLimitCacheInvalidator interface {
 	InvalidateAPIKeyRateLimit(ctx context.Context, keyID int64) error
 }
 
+// WalletResetCreditForKey is used only when the cached permanent balance is exhausted.
+// Expiry and remaining credit are always checked against the database, not the key cache.
+func (s *APIKeyService) WalletResetCreditForKey(ctx context.Context, key *APIKey) (float64, error) {
+	if key == nil || key.User == nil || (key.Group != nil && key.Group.IsSubscriptionType()) {
+		return 0, nil
+	}
+	return walletResetCredit(ctx, s.userRepo, key.User.ID, key.GroupID)
+}
+
 type APIKeyService struct {
 	apiKeyRepo                APIKeyRepository
 	userRepo                  UserRepository

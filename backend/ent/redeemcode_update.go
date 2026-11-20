@@ -79,6 +79,27 @@ func (_u *RedeemCodeUpdate) AddValue(v float64) *RedeemCodeUpdate {
 	return _u
 }
 
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (_u *RedeemCodeUpdate) SetResetCapUsd(v float64) *RedeemCodeUpdate {
+	_u.mutation.ResetResetCapUsd()
+	_u.mutation.SetResetCapUsd(v)
+	return _u
+}
+
+// SetNillableResetCapUsd sets the "reset_cap_usd" field if the given value is not nil.
+func (_u *RedeemCodeUpdate) SetNillableResetCapUsd(v *float64) *RedeemCodeUpdate {
+	if v != nil {
+		_u.SetResetCapUsd(*v)
+	}
+	return _u
+}
+
+// AddResetCapUsd adds value to the "reset_cap_usd" field.
+func (_u *RedeemCodeUpdate) AddResetCapUsd(v float64) *RedeemCodeUpdate {
+	_u.mutation.AddResetCapUsd(v)
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *RedeemCodeUpdate) SetStatus(v string) *RedeemCodeUpdate {
 	_u.mutation.SetStatus(v)
@@ -326,6 +347,12 @@ func (_u *RedeemCodeUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.AddedValue(); ok {
 		_spec.AddField(redeemcode.FieldValue, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.ResetCapUsd(); ok {
+		_spec.SetField(redeemcode.FieldResetCapUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedResetCapUsd(); ok {
+		_spec.AddField(redeemcode.FieldResetCapUsd, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(redeemcode.FieldStatus, field.TypeString, value)
 	}
@@ -477,6 +504,27 @@ func (_u *RedeemCodeUpdateOne) SetNillableValue(v *float64) *RedeemCodeUpdateOne
 // AddValue adds value to the "value" field.
 func (_u *RedeemCodeUpdateOne) AddValue(v float64) *RedeemCodeUpdateOne {
 	_u.mutation.AddValue(v)
+	return _u
+}
+
+// SetResetCapUsd sets the "reset_cap_usd" field.
+func (_u *RedeemCodeUpdateOne) SetResetCapUsd(v float64) *RedeemCodeUpdateOne {
+	_u.mutation.ResetResetCapUsd()
+	_u.mutation.SetResetCapUsd(v)
+	return _u
+}
+
+// SetNillableResetCapUsd sets the "reset_cap_usd" field if the given value is not nil.
+func (_u *RedeemCodeUpdateOne) SetNillableResetCapUsd(v *float64) *RedeemCodeUpdateOne {
+	if v != nil {
+		_u.SetResetCapUsd(*v)
+	}
+	return _u
+}
+
+// AddResetCapUsd adds value to the "reset_cap_usd" field.
+func (_u *RedeemCodeUpdateOne) AddResetCapUsd(v float64) *RedeemCodeUpdateOne {
+	_u.mutation.AddResetCapUsd(v)
 	return _u
 }
 
@@ -756,6 +804,12 @@ func (_u *RedeemCodeUpdateOne) sqlSave(ctx context.Context) (_node *RedeemCode, 
 	}
 	if value, ok := _u.mutation.AddedValue(); ok {
 		_spec.AddField(redeemcode.FieldValue, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ResetCapUsd(); ok {
+		_spec.SetField(redeemcode.FieldResetCapUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedResetCapUsd(); ok {
+		_spec.AddField(redeemcode.FieldResetCapUsd, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(redeemcode.FieldStatus, field.TypeString, value)

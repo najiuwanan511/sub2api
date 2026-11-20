@@ -229,6 +229,14 @@
           </div>
         </div>
 
+        <div v-if="form.provider_key === 'alipay'" class="mt-3 space-y-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          <p>{{ t('admin.settings.payment.alipayCallbackHelp') }}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <code class="min-w-0 flex-1 break-all">{{ alipayNotifyURL }}</code>
+            <button type="button" class="btn btn-secondary btn-sm" @click="copyToClipboard(alipayNotifyURL)">{{ t('common.copy') }}</button>
+          </div>
+        </div>
+
         <!-- 服务商 Webhook 提示 -->
         <div v-if="providerWebhookUrl" class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800/50 dark:bg-blue-900/20">
           <p class="text-xs text-blue-700 dark:text-blue-300">
@@ -307,6 +315,7 @@
 <script setup lang="ts">
 import { reactive, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useClipboard } from '@/composables/useClipboard'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import Select from '@/components/common/Select.vue'
@@ -380,6 +389,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { copyToClipboard } = useClipboard()
 
 interface PaymentGuideItem {
   title: string
@@ -430,6 +440,16 @@ const providerWebhookHint = computed(() =>
 )
 
 const callbackPaths = computed(() => PROVIDER_CALLBACK_PATHS[form.provider_key] || null)
+const callbackBase = (value: string) => (value.trim() || defaultBaseUrl).replace(/\/+$/, '')
+const alipayNotifyURL = computed(() => callbackBase(notifyBaseUrl.value) + WEBHOOK_PATHS.alipay)
+
+function isHTTPSOrigin(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password
+      && url.pathname === '/' && !url.search && !url.hash
+  } catch { return false }
+}
 
 const supportsPaymentMode = computed(() => providerSupportsPaymentMode(form.provider_key))
 
@@ -705,8 +725,12 @@ function handleSave() {
   // If base URL is empty, auto-fill with current domain
   const paths = PROVIDER_CALLBACK_PATHS[form.provider_key]
   if (paths) {
-    const notifyBase = (notifyBaseUrl.value.trim() || defaultBaseUrl).replace(/\/+$/, '')
-    const returnBase = (returnBaseUrl.value.trim() || defaultBaseUrl).replace(/\/+$/, '')
+    const notifyBase = callbackBase(notifyBaseUrl.value)
+    const returnBase = callbackBase(returnBaseUrl.value)
+    if (form.enabled && form.provider_key === 'alipay' && (!isHTTPSOrigin(notifyBase) || !isHTTPSOrigin(returnBase))) {
+      emitValidationError(t('admin.settings.payment.alipayHTTPSRequired'))
+      return
+    }
     notifyBaseUrl.value = notifyBase
     returnBaseUrl.value = returnBase
     if (paths.notifyUrl) filteredConfig['notifyUrl'] = notifyBase + paths.notifyUrl

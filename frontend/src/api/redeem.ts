@@ -6,6 +6,24 @@
 import { apiClient } from './client'
 import type { PaginatedResponse, RedeemCodeRequest } from '@/types'
 
+export interface WalletResetCredit {
+  redeem_code_id: number
+  group_id: number | null
+  group_name: string
+  amount_usd: number
+  remaining_usd: number
+  expires_at: string
+  status: 'active' | 'spent' | 'expired'
+}
+
+export interface WalletResetPreview {
+  group_name: string
+  percent: number
+  eligible_usd: number
+  credit_usd: number
+  validity_days: number
+}
+
 export interface RedeemHistoryItem {
   id: number
   code: string
@@ -36,6 +54,7 @@ export async function redeem(code: string): Promise<{
   value: number
   new_balance?: number
   new_concurrency?: number
+  reset_credit?: WalletResetCredit
 }> {
   const payload: RedeemCodeRequest = { code }
 
@@ -45,6 +64,7 @@ export async function redeem(code: string): Promise<{
     value: number
     new_balance?: number
     new_concurrency?: number
+    reset_credit?: WalletResetCredit
   }>('/redeem', payload)
 
   return data
@@ -61,7 +81,30 @@ export async function getHistory(page = 1, pageSize = 20): Promise<PaginatedResp
   return data
 }
 
+async function previewResetCard(code: string): Promise<WalletResetPreview> {
+  const { data } = await apiClient.post<WalletResetPreview>('/redeem/reset-card/preview', { code })
+  return data
+}
+
+async function applyResetCard(code: string): Promise<WalletResetCredit> {
+  const { data } = await apiClient.post<WalletResetCredit>('/redeem/reset-card/apply', { code })
+  return data
+}
+
+interface WalletResetCreditSummary {
+  active_usd: number
+  credits: WalletResetCredit[]
+}
+
+async function getResetCredits(): Promise<WalletResetCreditSummary> {
+  const { data } = await apiClient.get<WalletResetCreditSummary>('/redeem/reset-card/credits')
+  return data
+}
+
 export const redeemAPI = {
+  previewResetCard,
+  applyResetCard,
+  getResetCredits,
   redeem,
   getHistory
 }

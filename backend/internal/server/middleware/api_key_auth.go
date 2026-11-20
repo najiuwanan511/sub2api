@@ -269,8 +269,15 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 			} else {
 				// 非订阅模式 或 订阅模式但 subscriptionService 未注入：回退到余额检查
 				if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
-					AbortWithError(c, 403, "INSUFFICIENT_BALANCE", "Insufficient account balance")
-					return
+					credit, err := apiKeyService.WalletResetCreditForKey(c.Request.Context(), apiKey)
+					if err != nil {
+						AbortWithError(c, http.StatusServiceUnavailable, "BALANCE_CHECK_UNAVAILABLE", "Unable to check wallet credit")
+						return
+					}
+					if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance+credit, cfg) {
+						AbortWithError(c, 403, "INSUFFICIENT_BALANCE", "Insufficient account balance")
+						return
+					}
 				}
 			}
 		}

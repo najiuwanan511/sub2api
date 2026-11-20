@@ -19,6 +19,8 @@
         </div>
       </div>
 
+      <RouterLink to="/wallet/reset-cards" class="btn btn-secondary">{{ t('walletReset.title') }}</RouterLink>
+
       <!-- Redeem Form -->
       <div class="card">
         <div class="p-6">
@@ -113,6 +115,9 @@
                           t('redeem.subscriptionDays', { days: redeemResult.validity_days })
                         }})</span
                       >
+                    </p>
+                    <p v-if="redeemResult.reset_credit" class="font-medium">
+                      {{ t('walletReset.applied', { amount: `$${redeemResult.reset_credit.amount_usd}` }) }}
                     </p>
                     <p v-if="redeemResult.new_balance !== undefined">
                       {{ t('redeem.newBalance') }}:
@@ -391,6 +396,7 @@ const redeemResult = ref<{
   value: number
   new_balance?: number
   new_concurrency?: number
+  reset_credit?: import('@/api/redeem').WalletResetCredit
   group_name?: string
   validity_days?: number
 } | null>(null)
@@ -420,6 +426,7 @@ const isAdminAdjustment = (type: string) => {
 }
 
 const getHistoryItemTitle = (item: RedeemHistoryItem) => {
+  if (item.type === 'reset_card') return t('walletReset.title')
   if (item.type === 'balance') {
     return t('redeem.balanceAddedRedeem')
   } else if (item.type === 'admin_balance') {
@@ -435,6 +442,7 @@ const getHistoryItemTitle = (item: RedeemHistoryItem) => {
 }
 
 const formatHistoryValue = (item: RedeemHistoryItem) => {
+  if (item.type === 'reset_card') return `${item.value}%`
   if (isBalanceType(item.type)) {
     const sign = item.value >= 0 ? '+' : ''
     return `${sign}$${item.value.toFixed(2)}`

@@ -70,7 +70,8 @@ export async function generate(
   value: number,
   groupId?: number | null,
   validityDays?: number,
-  expiresInDays?: number | null
+  expiresInDays?: number | null,
+  resetCapUSD?: number
 ): Promise<RedeemCode[]> {
   const payload: GenerateRedeemCodesRequest = {
     count,
@@ -79,7 +80,8 @@ export async function generate(
   }
 
   // 订阅类型专用字段
-  if (type === 'subscription') {
+  if (type === 'reset_card') payload.reset_cap_usd = resetCapUSD
+  if (type === 'subscription' || type === 'reset_card') {
     payload.group_id = groupId
     if (validityDays && validityDays > 0) {
       payload.validity_days = validityDays

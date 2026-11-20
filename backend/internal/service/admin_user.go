@@ -1257,6 +1257,19 @@ func (s *adminServiceImpl) GenerateRedeemCodes(ctx context.Context, input *Gener
 		return nil, ErrRedeemCodeExpired
 	}
 
+	if input.Type == RedeemTypeResetCard {
+		if err := validateWalletResetCard(input.GroupID, input.Value, input.ResetCapUSD, input.ValidityDays); err != nil {
+			return nil, err
+		}
+		group, err := s.groupRepo.GetByID(ctx, *input.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		if group.IsSubscriptionType() {
+			return nil, ErrWalletResetCardGroup
+		}
+	}
+
 	// 如果是订阅类型，验证必须有 GroupID
 	if input.Type == RedeemTypeSubscription {
 		if input.GroupID == nil {
@@ -1284,6 +1297,9 @@ func (s *adminServiceImpl) GenerateRedeemCodes(ctx context.Context, input *Gener
 			Value:     input.Value,
 			Status:    StatusUnused,
 			ExpiresAt: input.ExpiresAt,
+		}
+		if input.Type == RedeemTypeResetCard {
+			code.GroupID, code.ValidityDays, code.ResetCapUSD = input.GroupID, input.ValidityDays, input.ResetCapUSD
 		}
 		// 订阅类型专用字段
 		if input.Type == RedeemTypeSubscription {

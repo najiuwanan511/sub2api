@@ -131,6 +131,10 @@
           <template #cell-value="{ value, row }">
             <span class="text-sm font-medium text-gray-900 dark:text-white">
               <template v-if="row.type === 'balance'">${{ value.toFixed(2) }}</template>
+              <template v-else-if="row.type === 'reset_card'">
+                {{ value }}% · ${{ row.reset_cap_usd }} · {{ row.validity_days }} {{ t('admin.redeem.days') }}
+                <span v-if="row.group"> · {{ row.group.name }}</span>
+              </template>
               <template v-else-if="row.type === 'subscription'">
                 {{ row.validity_days || 30 }} {{ t('admin.redeem.days') }}
                 <span v-if="row.group" class="ml-1 text-xs text-gray-500 dark:text-gray-400"
@@ -277,7 +281,7 @@
       <div v-if="showGenerateDialog" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="fixed inset-0 bg-black/50" @click="showGenerateDialog = false"></div>
         <div
-          class="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800"
+          class="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800"
         >
           <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             {{ t('admin.redeem.generateCodesTitle') }}
@@ -288,7 +292,7 @@
               <Select v-model="generateForm.type" :options="typeOptions" />
             </div>
             <!-- 余额/并发类型：显示数值输入 -->
-            <div v-if="generateForm.type !== 'subscription' && generateForm.type !== 'invitation'">
+            <div v-if="generateForm.type !== 'subscription' && generateForm.type !== 'invitation' && generateForm.type !== 'reset_card'">
               <label class="input-label">
                 {{
                   generateForm.type === 'balance'
@@ -305,6 +309,24 @@
                 class="input"
               />
             </div>
+            <template v-if="generateForm.type === 'reset_card'">
+              <div>
+                <label class="input-label">{{ t('admin.redeem.selectGroup') }}</label>
+                <Select v-model="generateForm.group_id" :options="walletGroupOptions" />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="text-sm">{{ t('admin.redeem.resetPercent') }}
+                  <input v-model.number="generateForm.value" type="number" required min="0.01" max="100" step="0.01" class="input mt-1" />
+                </label>
+                <label class="text-sm">{{ t('admin.redeem.resetCap') }}
+                  <input v-model.number="generateForm.reset_cap_usd" type="number" required min="0.01" max="1000000000" step="0.01" class="input mt-1" />
+                </label>
+                <label class="text-sm">{{ t('admin.redeem.resetValidity') }}
+                  <input v-model.number="generateForm.validity_days" type="number" required min="1" max="365" step="1" class="input mt-1" />
+                </label>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('admin.redeem.resetCardHint') }}</p>
+            </template>
             <!-- 邀请码类型：显示提示信息 -->
             <div v-if="generateForm.type === 'invitation'" class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
               <p class="text-sm text-blue-700 dark:text-blue-300">
@@ -675,6 +697,10 @@ const subscriptionGroupOptions = computed(() => {
     }))
 })
 
+const walletGroupOptions = computed(() => subscriptionGroups.value
+  .filter(group => group.subscription_type === 'standard')
+  .map(group => ({ value: group.id, label: group.name })))
+
 const batchGroupOptions = computed(() => [
   { value: null, label: t('admin.redeem.clearGroup') },
   ...subscriptionGroupOptions.value
@@ -743,7 +769,8 @@ const typeOptions = computed(() => [
   { value: 'balance', label: t('admin.redeem.balance') },
   { value: 'concurrency', label: t('admin.redeem.concurrency') },
   { value: 'subscription', label: t('admin.redeem.subscription') },
-  { value: 'invitation', label: t('admin.redeem.invitation') }
+  { value: 'invitation', label: t('admin.redeem.invitation') },
+  { value: 'reset_card', label: t('admin.redeem.types.reset_card') }
 ])
 
 const filterTypeOptions = computed(() => [
@@ -751,7 +778,8 @@ const filterTypeOptions = computed(() => [
   { value: 'balance', label: t('admin.redeem.balance') },
   { value: 'concurrency', label: t('admin.redeem.concurrency') },
   { value: 'subscription', label: t('admin.redeem.subscription') },
-  { value: 'invitation', label: t('admin.redeem.invitation') }
+  { value: 'invitation', label: t('admin.redeem.invitation') },
+  { value: 'reset_card', label: t('admin.redeem.types.reset_card') }
 ])
 
 const filterStatusOptions = computed(() => [
@@ -836,6 +864,7 @@ const redeemCodeExpiryOptions = computed<{ value: RedeemCodeExpiryOption; label:
 ])
 
 const generateForm = reactive({
+  reset_cap_usd: 150,
   type: 'balance' as RedeemCodeType,
   value: 10,
   count: 1,
@@ -848,7 +877,11 @@ const generateForm = reactive({
 // 监听类型变化，邀请码类型时自动设置 value 为 0
 watch(
   () => generateForm.type,
-  (newType) => {
+  (newType, oldType) => {
+    generateForm.group_id = null
+    generateForm.validity_days = newType === 'reset_card' ? 7 : 30
+    if (newType === 'reset_card') { generateForm.value = 30; return }
+    if (oldType === 'reset_card') generateForm.value = 10
     if (newType === 'invitation') {
       generateForm.value = 0
     } else if (generateForm.value === 0) {
@@ -1027,7 +1060,7 @@ const buildBatchUpdateFields = (): BatchUpdateRedeemCodeFields | null => {
 
 const handleGenerateCodes = async () => {
   // 订阅类型必须选择分组
-  if (generateForm.type === 'subscription' && !generateForm.group_id) {
+  if ((generateForm.type === 'subscription' || generateForm.type === 'reset_card') && !generateForm.group_id) {
     appStore.showError(t('admin.redeem.groupRequired'))
     return
   }
@@ -1044,16 +1077,17 @@ const handleGenerateCodes = async () => {
       generateForm.count,
       generateForm.type,
       generateForm.value,
-      generateForm.type === 'subscription' ? generateForm.group_id : undefined,
-      generateForm.type === 'subscription' ? generateForm.validity_days : undefined,
-      expiresInDays
+      ['subscription', 'reset_card'].includes(generateForm.type) ? generateForm.group_id : undefined,
+      ['subscription', 'reset_card'].includes(generateForm.type) ? generateForm.validity_days : undefined,
+      expiresInDays,
+      generateForm.type === 'reset_card' ? generateForm.reset_cap_usd : undefined
     )
     showGenerateDialog.value = false
     generatedCodes.value = result
     showResultDialog.value = true
     // 重置表单
     generateForm.group_id = null
-    generateForm.validity_days = 30
+    generateForm.validity_days = generateForm.type === 'reset_card' ? 7 : 30
     generateForm.expiry_option = 'never'
     generateForm.custom_expiry_days = 7
     loadCodes()

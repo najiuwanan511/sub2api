@@ -25,8 +25,14 @@ import (
 // Only validates enabled instances — a disabled instance may be a half-filled
 // draft the admin will complete later.
 func (s *PaymentConfigService) validateProviderConfig(providerKey string, config map[string]string) error {
-	_, err := provider.CreateProvider(providerKey, "_validate_", config)
-	return err
+	p, err := provider.CreateProvider(providerKey, "_validate_", config)
+	if err != nil {
+		return err
+	}
+	if alipay, ok := p.(*provider.Alipay); ok {
+		return alipay.ValidateConfig()
+	}
+	return nil
 }
 
 // --- Provider Instance CRUD ---

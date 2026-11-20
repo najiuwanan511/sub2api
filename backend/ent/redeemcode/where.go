@@ -70,6 +70,11 @@ func Value(v float64) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldEQ(FieldValue, v))
 }
 
+// ResetCapUsd applies equality check predicate on the "reset_cap_usd" field. It's identical to ResetCapUsdEQ.
+func ResetCapUsd(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldEQ(FieldResetCapUsd, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldEQ(FieldStatus, v))
@@ -278,6 +283,46 @@ func ValueLT(v float64) predicate.RedeemCode {
 // ValueLTE applies the LTE predicate on the "value" field.
 func ValueLTE(v float64) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldLTE(FieldValue, v))
+}
+
+// ResetCapUsdEQ applies the EQ predicate on the "reset_cap_usd" field.
+func ResetCapUsdEQ(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldEQ(FieldResetCapUsd, v))
+}
+
+// ResetCapUsdNEQ applies the NEQ predicate on the "reset_cap_usd" field.
+func ResetCapUsdNEQ(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldNEQ(FieldResetCapUsd, v))
+}
+
+// ResetCapUsdIn applies the In predicate on the "reset_cap_usd" field.
+func ResetCapUsdIn(vs ...float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldIn(FieldResetCapUsd, vs...))
+}
+
+// ResetCapUsdNotIn applies the NotIn predicate on the "reset_cap_usd" field.
+func ResetCapUsdNotIn(vs ...float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldNotIn(FieldResetCapUsd, vs...))
+}
+
+// ResetCapUsdGT applies the GT predicate on the "reset_cap_usd" field.
+func ResetCapUsdGT(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldGT(FieldResetCapUsd, v))
+}
+
+// ResetCapUsdGTE applies the GTE predicate on the "reset_cap_usd" field.
+func ResetCapUsdGTE(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldGTE(FieldResetCapUsd, v))
+}
+
+// ResetCapUsdLT applies the LT predicate on the "reset_cap_usd" field.
+func ResetCapUsdLT(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldLT(FieldResetCapUsd, v))
+}
+
+// ResetCapUsdLTE applies the LTE predicate on the "reset_cap_usd" field.
+func ResetCapUsdLTE(v float64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldLTE(FieldResetCapUsd, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

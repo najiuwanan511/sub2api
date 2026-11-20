@@ -336,6 +336,9 @@ func buildUsageBillingCommand(requestID string, usageLog *UsageLog, p *postUsage
 		cmd.SubscriptionCost = p.Cost.ActualCost
 	} else if p.Cost.ActualCost > 0 {
 		cmd.BalanceCost = p.Cost.ActualCost
+		if p.APIKey.GroupID != nil {
+			cmd.WalletGroupID = *p.APIKey.GroupID
+		}
 	}
 
 	if p.shouldDeductAPIKeyQuota() {
@@ -473,6 +476,10 @@ func syncBalanceCacheAfterDeduction(ctx context.Context, p *postUsageBillingPara
 	if p == nil || p.Cost == nil || p.User == nil || deps == nil || deps.billingCacheService == nil {
 		return
 	}
+	cashCost := settledWalletCashCost(p, result)
+	if cashCost <= 0 {
+		return
+	}
 	if result != nil && result.NewBalance != nil && deps.billingCacheService.balanceBelowEligibilityThreshold(*result.NewBalance) {
 		if err := deps.billingCacheService.InvalidateUserBalance(ctx, p.User.ID); err != nil {
 			slog.Warn("invalidate balance cache after exhausted deduction failed",
@@ -488,13 +495,13 @@ func syncBalanceCacheAfterDeduction(ctx context.Context, p *postUsageBillingPara
 		// 在途预留开启时同步扣减余额缓存：计费任务结束后才会释放预留，
 		// 必须保证此时准入读取的缓存余额已反映本次扣费，否则释放与扣减之间
 		// 仍存在「在途=0 且余额未扣」的窗口。本函数运行在计费 worker 中，不在请求热路径。
-		err := deps.billingCacheService.DeductBalanceCache(ctx, p.User.ID, p.Cost.ActualCost)
+		err := deps.billingCacheService.DeductBalanceCache(ctx, p.User.ID, cashCost)
 		if err == nil {
 			return
 		}
 		logger.LegacyPrintf("service.gateway", "Warning: sync deduct balance cache failed for user %d, falling back to queue: %v", p.User.ID, err)
 	}
-	deps.billingCacheService.QueueDeductBalance(p.User.ID, p.Cost.ActualCost)
+	deps.billingCacheService.QueueDeductBalance(p.User.ID, cashCost)
 }
 
 // notifyBalanceLow sends balance low notification after deduction.
@@ -516,23 +523,34 @@ func notifyBalanceLow(ctx context.Context, p *postUsageBillingParams, deps *bill
 		return
 	}
 
+	cashCost := settledWalletCashCost(p, result)
+	if cashCost <= 0 {
+		return
+	}
 	oldBalance := resolveOldBalance(p, result)
 	slog.Debug("notifyBalanceLow: calling CheckBalanceAfterDeduction",
 		"user_id", p.User.ID,
 		"old_balance", oldBalance,
-		"cost", p.Cost.ActualCost,
+		"cost", cashCost,
 		"notify_enabled", p.User.BalanceNotifyEnabled,
 		"threshold", p.User.BalanceNotifyThreshold,
 		"result_has_new_balance", result != nil && result.NewBalance != nil,
 	)
-	deps.balanceNotifyService.CheckBalanceAfterDeduction(ctx, p.User, oldBalance, p.Cost.ActualCost)
+	deps.balanceNotifyService.CheckBalanceAfterDeduction(ctx, p.User, oldBalance, cashCost)
+}
+
+func settledWalletCashCost(p *postUsageBillingParams, result *UsageBillingApplyResult) float64 {
+	if result != nil && result.WalletResetCreditUsed > 0 {
+		return QuantizeUsageBillingAmount(p.Cost.ActualCost) - result.WalletResetCreditUsed
+	}
+	return p.Cost.ActualCost
 }
 
 // resolveOldBalance returns the pre-deduction balance.
 // Prefers the DB transaction result (newBalance + cost) over snapshot.
 func resolveOldBalance(p *postUsageBillingParams, result *UsageBillingApplyResult) float64 {
 	if result != nil && result.NewBalance != nil {
-		return *result.NewBalance + p.Cost.ActualCost
+		return *result.NewBalance + settledWalletCashCost(p, result)
 	}
 	// Legacy fallback: snapshot balance from request context
 	return p.User.Balance

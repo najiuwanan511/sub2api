@@ -73,6 +73,7 @@ const (
 // Redeem type constants
 const (
 	RedeemTypeBalance      = "balance"
+	RedeemTypeResetCard    = "reset_card"
 	RedeemTypeConcurrency  = "concurrency"
 	RedeemTypeSubscription = "subscription"
 	RedeemTypeInvitation   = "invitation"

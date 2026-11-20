@@ -253,6 +253,12 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/wallet/reset-cards',
+    name: 'WalletResetCards',
+    component: () => import('@/views/user/WalletResetCardsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, title: 'Reset Cards', titleKey: 'walletReset.title' }
+  },
+  {
     path: '/affiliate',
     name: 'Affiliate',
     component: () => import('@/views/user/AffiliateView.vue'),

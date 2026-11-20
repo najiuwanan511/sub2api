@@ -20,6 +20,8 @@ type RedeemCode struct {
 
 	GroupID      *int64
 	ValidityDays int
+	ResetCapUSD  float64
+	ResetCredit  *WalletResetCredit
 
 	User  *User
 	Group *Group

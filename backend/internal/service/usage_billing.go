@@ -37,6 +37,7 @@ type UsageBillingCommand struct {
 	ImageCount          int
 	MediaType           string
 
+	WalletGroupID       int64 // does not change the pre-upgrade dedup fingerprint
 	BalanceCost         float64
 	SubscriptionCost    float64
 	APIKeyQuotaCost     float64
@@ -168,11 +169,12 @@ type AccountQuotaState struct {
 }
 
 type UsageBillingApplyResult struct {
-	Applied              bool
-	APIKeyQuotaExhausted bool
-	NewBalance           *float64           // post-deduction balance (nil = no balance deduction)
-	BalanceOverdrafted   bool               // true when the sufficient-balance guard missed and debt was still recorded
-	QuotaState           *AccountQuotaState // post-increment quota state (nil = no quota increment)
+	Applied               bool
+	APIKeyQuotaExhausted  bool
+	NewBalance            *float64 // post-deduction balance (nil = no balance deduction)
+	WalletResetCreditUsed float64
+	BalanceOverdrafted    bool               // true when the sufficient-balance guard missed and debt was still recorded
+	QuotaState            *AccountQuotaState // post-increment quota state (nil = no quota increment)
 }
 
 // BatchImageBalanceHoldCommand describes an idempotent balance hold operation.

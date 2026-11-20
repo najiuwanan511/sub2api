@@ -765,6 +765,33 @@ export default {
   },
 
   // Redeem
+  walletReset: {
+    title: '重置卡',
+    regular: '常规余额',
+    temporary: '可用限时额度（所有分组）',
+    hint: '按指定分组自上次兑换以来实扣的常规余额返还。返还额度只能在对应分组使用，不会存入常规余额；升级前的消费不计入。',
+    code: '输入重置卡卡密',
+    preview: '预览返还',
+    apply: '确认兑换',
+    estimate: '预计返还 {amount} 至「{group}」',
+    detail: '可返消费 {spend} · 返还 {rate}% · 有效期 {days} 天',
+    applied: '兑换成功，获得 {amount} 限时额度。',
+    history: '限时额度记录（最多 100 条）',
+    loadFailed: '无法加载限时额度，请刷新后再试。',
+    empty: '暂无限时额度记录。',
+    expiry: '到期时间：{date}',
+    creditUsage: '已用 {used} / {total}',
+    status: { active: '可用', spent: '已用完', expired: '已失效' },
+    notFound: '找不到这张重置卡。',
+    expired: '这张重置卡已过期。',
+    used: '这张重置卡已使用。',
+    noSpend: '该分组暂时没有可返还的消费。',
+    notCard: '这不是重置卡，请到兑换码页面使用。',
+    groupUnavailable: '这张卡绑定的余额分组不可用。',
+    previewFailed: '预览失败，请稍后重试。',
+    applyFailed: '兑换失败，请稍后重试。',
+  },
+
   redeem: {
     title: '兑换码',
     description: '输入兑换码以充值余额或增加并发数',

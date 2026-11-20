@@ -204,8 +204,15 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 			c.Set(string(ContextKeySubscription), subscription)
 		} else {
 			if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
-				abortWithGoogleError(c, 403, "Insufficient account balance")
-				return
+				credit, err := apiKeyService.WalletResetCreditForKey(c.Request.Context(), apiKey)
+				if err != nil {
+					abortWithGoogleError(c, 503, "Unable to check wallet credit")
+					return
+				}
+				if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance+credit, cfg) {
+					abortWithGoogleError(c, 403, "Insufficient account balance")
+					return
+				}
 			}
 		}
 

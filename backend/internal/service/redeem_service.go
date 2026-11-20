@@ -392,7 +392,7 @@ func unsupportedRedeemTypeError(codeType string) error {
 
 // Redeem 使用兑换码
 func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (*RedeemCode, error) {
-	return s.redeem(ctx, userID, code, enforceRedeemRateLimit)
+	return s.redeem(ctx, userID, code, enforceRedeemRateLimit, "")
 }
 
 // redeemForPaymentFulfillment is restricted to trusted payment fulfillment.
@@ -400,7 +400,7 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 // redeem failure counter. All code validation and transactional updates remain
 // identical to the public redemption path.
 func (s *RedeemService) redeemForPaymentFulfillment(ctx context.Context, userID int64, code string) (*RedeemCode, error) {
-	return s.redeem(ContextSkipRedeemAffiliate(ctx), userID, code, bypassRedeemRateLimit)
+	return s.redeem(ContextSkipRedeemAffiliate(ctx), userID, code, bypassRedeemRateLimit, "")
 }
 
 // RedeemForAdminFulfillment is restricted to trusted admin fulfillment.
@@ -408,10 +408,18 @@ func (s *RedeemService) redeemForPaymentFulfillment(ctx context.Context, userID 
 // redeem failure counter. Unlike payment fulfillment, the normal redeem-level
 // affiliate rebate remains enabled.
 func (s *RedeemService) RedeemForAdminFulfillment(ctx context.Context, userID int64, code string) (*RedeemCode, error) {
-	return s.redeem(ctx, userID, code, bypassRedeemRateLimit)
+	return s.redeem(ctx, userID, code, bypassRedeemRateLimit, "")
 }
 
-func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, rateLimitPolicy redeemRateLimitPolicy) (*RedeemCode, error) {
+func (s *RedeemService) ApplyWalletResetCard(ctx context.Context, userID int64, code string) (*WalletResetCredit, error) {
+	card, err := s.redeem(ctx, userID, code, enforceRedeemRateLimit, RedeemTypeResetCard)
+	if err != nil {
+		return nil, err
+	}
+	return card.ResetCredit, nil
+}
+
+func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, rateLimitPolicy redeemRateLimitPolicy, expectedType string) (*RedeemCode, error) {
 	if rateLimitPolicy == enforceRedeemRateLimit {
 		if err := s.checkRedeemRateLimit(ctx, userID); err != nil {
 			return nil, err
@@ -436,6 +444,10 @@ func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, r
 		return nil, fmt.Errorf("get redeem code: %w", err)
 	}
 
+	if expectedType != "" && redeemCode.Type != expectedType {
+		return nil, unsupportedRedeemTypeError(redeemCode.Type)
+	}
+
 	// 检查兑换码状态和码本身的过期时间
 	if redeemCode.IsExpired() {
 		if rateLimitPolicy == enforceRedeemRateLimit {
@@ -452,7 +464,7 @@ func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, r
 
 	// 验证兑换码类型的前置条件。邀请码属于注册流程，不能通过普通兑换接口使用。
 	switch redeemCode.Type {
-	case RedeemTypeBalance, RedeemTypeConcurrency:
+	case RedeemTypeBalance, RedeemTypeConcurrency, RedeemTypeResetCard:
 	case RedeemTypeSubscription:
 		if redeemCode.GroupID == nil {
 			return nil, infraerrors.BadRequest("REDEEM_CODE_INVALID", "invalid subscription redeem code: missing group_id")
@@ -486,8 +498,14 @@ func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, r
 		return nil, fmt.Errorf("mark code as used: %w", err)
 	}
 
+	var resetCredit *WalletResetCredit
 	// 执行兑换逻辑（兑换码已被锁定，此时可安全操作）
 	switch redeemCode.Type {
+	case RedeemTypeResetCard:
+		resetCredit, err = issueWalletResetCredit(txCtx, tx, userID, redeemCode)
+		if err != nil {
+			return nil, err
+		}
 	case RedeemTypeBalance:
 		amount := redeemCode.Value
 		if amount < 0 {
@@ -560,6 +578,7 @@ func (s *RedeemService) redeem(ctx context.Context, userID int64, code string, r
 		return nil, fmt.Errorf("get updated redeem code: %w", err)
 	}
 
+	redeemCode.ResetCredit = resetCredit
 	return redeemCode, nil
 }
 

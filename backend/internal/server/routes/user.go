@@ -131,6 +131,9 @@ func RegisterUserRoutes(
 		{
 			redeem.POST("", h.Redeem.Redeem)
 			redeem.GET("/history", h.Redeem.GetHistory)
+			redeem.POST("/reset-card/preview", panelRateLimiter.Heavy(), h.Redeem.PreviewWalletResetCard)
+			redeem.POST("/reset-card/apply", panelRateLimiter.Heavy(), h.Redeem.ApplyWalletResetCard)
+			redeem.GET("/reset-card/credits", panelRateLimiter.Heavy(), h.Redeem.ListWalletResetCredits)
 		}
 
 		// 用户订阅

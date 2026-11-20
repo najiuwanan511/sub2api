@@ -761,6 +761,33 @@ export default {
   },
 
   // Redeem
+  walletReset: {
+    title: 'Reset Cards',
+    regular: 'Regular balance',
+    temporary: 'Available temporary credit (all groups)',
+    hint: 'Get back a share of regular wallet spend in the card group since your last redemption. Credit is usable only in that group and does not add to your regular balance. Spending before the upgrade is excluded.',
+    code: 'Enter reset card code',
+    preview: 'Preview credit',
+    apply: 'Confirm redemption',
+    estimate: 'Estimated credit: {amount} for {group}',
+    detail: 'Eligible spend {spend} · {rate}% back · Valid for {days} days',
+    applied: 'Redeemed {amount} in temporary credit.',
+    history: 'Temporary credit history (up to 100 records)',
+    loadFailed: 'Could not load temporary credits. Refresh to try again.',
+    empty: 'No temporary credit records yet.',
+    expiry: 'Expires: {date}',
+    creditUsage: 'Used {used} / {total}',
+    status: { active: 'Available', spent: 'Used up', expired: 'Inactive' },
+    notFound: 'Reset card not found.',
+    expired: 'This card has expired.',
+    used: 'This card has already been used.',
+    noSpend: 'There is no eligible spend in this group yet.',
+    notCard: 'This is not a reset card. Try the redeem code page.',
+    groupUnavailable: 'The wallet group for this card is unavailable.',
+    previewFailed: 'Could not preview the card. Try again later.',
+    applyFailed: 'Could not redeem the card. Try again later.',
+  },
+
   redeem: {
     title: 'Redeem Code',
     description: 'Enter your redeem code to add balance or increase concurrency',

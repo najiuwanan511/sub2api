@@ -23,6 +23,9 @@ const messages: Record<string, string> = {
   'admin.settings.payment.airwallexWebhookHint': 'Select payment_intent.succeeded and use the latest stable API version.',
 }
 
+const { copyToClipboard } = vi.hoisted(() => ({ copyToClipboard: vi.fn() }))
+vi.mock('@/composables/useClipboard', () => ({ useClipboard: () => ({ copyToClipboard }) }))
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => {
@@ -146,6 +149,27 @@ describe('PaymentProviderDialog EasyPay refund protocol', () => {
 
     const payload = wrapper.emitted('save')?.[0]?.[0] as { config: Record<string, string> }
     expect(payload.config.refundSuccessCode).toBe(selectedCode)
+    wrapper.unmount()
+  })
+})
+
+describe('PaymentProviderDialog Alipay callback', () => {
+  it('copies the exact webhook URL and rejects non-HTTPS configuration', async () => {
+    const provider = providerFactory({ provider_key: 'alipay', supported_types: ['alipay'], config: {
+      appId: '123456', notifyUrl: 'https://pay.example.com/api/v1/payment/webhook/alipay',
+      returnUrl: 'https://pay.example.com/payment/result',
+    } })
+    const wrapper = mountDialog({ editing: provider })
+    ;(wrapper.vm as unknown as { loadProvider: (provider: ProviderInstance) => void }).loadProvider(provider)
+    await nextTick()
+    const copy = wrapper.findAll('button').find(button => button.text() === 'common.copy')
+    expect(copy).toBeDefined()
+    await copy!.trigger('click')
+    expect(copyToClipboard).toHaveBeenCalledWith(provider.config.notifyUrl)
+    const domains = wrapper.findAll('input').filter(input => input.classes().includes('!rounded-r-none'))
+    await domains[0].setValue('http://pay.example.com')
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.emitted('save')).toBeUndefined()
     wrapper.unmount()
   })
 })

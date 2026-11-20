@@ -1817,7 +1817,7 @@ export interface CodexSessionImportResult {
 
 // ==================== Usage & Redeem Types ====================
 
-export type RedeemCodeType = 'balance' | 'concurrency' | 'subscription' | 'invitation'
+export type RedeemCodeType = 'balance' | 'concurrency' | 'subscription' | 'invitation' | 'reset_card'
 export type UsageRequestType = 'unknown' | 'sync' | 'stream' | 'ws_v2' | 'cyber' | 'live'
 export type ImageSizeSource = 'output' | 'input' | 'default' | 'legacy'
 export type ImageSizeBreakdown = Record<string, number>
@@ -1948,6 +1948,7 @@ export interface UsageCleanupTask {
 }
 
 export interface RedeemCode {
+  reset_cap_usd?: number
   id: number
   code: string
   type: RedeemCodeType
@@ -1966,6 +1967,7 @@ export interface RedeemCode {
 }
 
 export interface GenerateRedeemCodesRequest {
+  reset_cap_usd?: number
   count: number
   type: RedeemCodeType
   value: number

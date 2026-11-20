@@ -238,6 +238,11 @@ export default {
 
     // Redeem Codes Management
     redeem: {
+      resetPercent: '返还比例 (%)',
+      resetCap: '上限 (USD)',
+      resetValidity: '返还有效期 (天)',
+      resetCardHint: '按指定余额分组自上次重置以来已实际扣除的常规余额返还。重置时清除本轮可返消费基数，返还额度不能退款或再次参与返还。',
+
       title: '兑换码管理',
       description: '生成和管理兑换码',
       generateCodes: '生成兑换码',
@@ -253,6 +258,7 @@ export default {
         actions: '操作'
       },
       types: {
+        reset_card: '重置卡',
         balance: '余额',
         concurrency: '并发数',
         subscription: '订阅',

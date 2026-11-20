@@ -139,8 +139,8 @@ export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
   ],
   alipay: [
     { key: 'appId', label: 'App ID', sensitive: false },
-    { key: 'privateKey', label: '', sensitive: true },
-    { key: 'publicKey', label: '', sensitive: true },
+    { key: 'privateKey', label: '', sensitive: true, hintKey: 'admin.settings.payment.alipayPrivateKeyHint' },
+    { key: 'publicKey', label: '', sensitive: true, hintKey: 'admin.settings.payment.alipayPublicKeyHint' },
   ],
   wxpay: [
     { key: 'appId', label: 'App ID', sensitive: false },

@@ -763,7 +763,7 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 			return err
 		}
 	} else {
-		if err := s.checkBalanceEligibility(ctx, user.ID); err != nil {
+		if err := s.checkBalanceEligibilityForGroup(ctx, user.ID, group); err != nil {
 			return err
 		}
 	}
@@ -806,7 +806,7 @@ func (s *BillingCacheService) ReserveFixedCharge(ctx context.Context, user *User
 	}
 	subscriptionBill := group != nil && group.IsSubscriptionType() && subscription != nil
 	if !subscriptionBill {
-		balance, err := s.GetUserBalance(ctx, user.ID)
+		balance, err := s.walletBalanceForGroup(ctx, user.ID, group)
 		if err != nil {
 			return nil, ErrBillingServiceUnavailable.WithCause(err)
 		}
@@ -1023,7 +1023,25 @@ func (s *BillingCacheService) balanceBelowEligibilityThreshold(balance float64) 
 
 // checkBalanceEligibility 检查余额模式资格
 func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, userID int64) error {
+	return s.checkBalanceEligibilityForGroup(ctx, userID, nil)
+}
+
+func (s *BillingCacheService) walletBalanceForGroup(ctx context.Context, userID int64, group *Group) (float64, error) {
 	balance, err := s.GetUserBalance(ctx, userID)
+	if err != nil || group == nil || group.IsSubscriptionType() {
+		return balance, err
+	}
+	credit, err := walletResetCredit(ctx, s.userRepo, userID, &group.ID)
+	return balance + credit, err
+}
+
+func (s *BillingCacheService) checkBalanceEligibilityForGroup(ctx context.Context, userID int64, group *Group) error {
+	balance, err := s.GetUserBalance(ctx, userID)
+	if err == nil && s.balanceBelowEligibilityThreshold(balance) && group != nil && !group.IsSubscriptionType() {
+		var credit float64
+		credit, err = walletResetCredit(ctx, s.userRepo, userID, &group.ID)
+		balance += credit
+	}
 	if err != nil {
 		if s.circuitBreaker != nil {
 			s.circuitBreaker.OnFailure(err)

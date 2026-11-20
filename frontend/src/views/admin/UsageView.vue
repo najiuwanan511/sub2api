@@ -1,10 +1,24 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
-      <UsageStatsCards :stats="usageStats" />
+    <div class="gateway-usage-page space-y-4">
+      <GatewayMetricGrid :metrics="usageMetrics" />
       <!-- Charts Section -->
-      <div class="space-y-4">
-        <div class="card p-4">
+      <div class="gateway-usage-chart-grid">
+        <section class="card gateway-panel gateway-usage-trend">
+          <header class="gateway-panel-heading">
+            <div><h2>{{ t('admin.dashboard.tokenUsageTrend') }}</h2><p>{{ startDate }} – {{ endDate }}</p></div>
+            <div class="gateway-segment" role="group" :aria-label="t('admin.dashboard.timeRange')">
+              <button v-for="days in [7, 14, 30]" :key="days" type="button" :aria-pressed="isUsagePreset(days)" @click="setUsagePreset(days)">{{ t('gatewayUi.rangeDays', { count: days }) }}</button>
+            </div>
+          </header>
+          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" embedded />
+        </section>
+        <GatewayTokenMix :stats="usageStats" />
+      </div>
+      <details class="card gateway-usage-breakdowns">
+        <summary>{{ t('gatewayUi.breakdown') }}</summary>
+        <div class="space-y-4 p-4">
+        <div class="card p-3">
           <div class="flex flex-wrap items-center gap-4">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.dashboard.timeRange') }}:</span>
@@ -61,11 +75,12 @@
             :end-date="endDate"
             :filters="breakdownFilters"
           />
-          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
+          <UsageStatsCards :stats="usageStats" />
         </div>
-      </div>
+        </div>
+      </details>
       <!-- 明细区：tab 栏 + 筛选 + 内容收进同一张卡片，消除割裂感 -->
-      <div class="card">
+      <div class="card gateway-usage-details">
         <div class="flex flex-wrap items-center border-b border-gray-200 px-2 dark:border-dark-700 sm:px-4">
           <button
             v-for="tab in detailTabs"
@@ -83,7 +98,7 @@
           </button>
         </div>
 
-        <UsageFilters v-model="filters" ref="usageFiltersRef" flat :mode="activeTab" class="border-b border-gray-100 dark:border-dark-700/50" :start-date="startDate" :end-date="endDate" :exporting="exporting" :model-options="modelNameOptions" @change="applyFilters" @refresh="refreshData" @reset="resetFilters" @cleanup="openCleanupDialog" @export="exportToExcel">
+        <UsageFilters v-model="filters" ref="usageFiltersRef" flat compact :mode="activeTab" class="border-b border-gray-100 dark:border-dark-700/50" :start-date="startDate" :end-date="endDate" :exporting="exporting" :model-options="modelNameOptions" @change="applyFilters" @refresh="refreshData" @reset="resetFilters" @cleanup="openCleanupDialog" @export="exportToExcel">
           <template #after-reset>
             <div v-if="activeTab !== 'ranking'" class="relative" ref="columnDropdownRef">
               <button
@@ -190,9 +205,11 @@ import { saveAs } from 'file-saver'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'; import { adminAPI } from '@/api/admin'; import { adminUsageAPI } from '@/api/admin/usage'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
-import { formatReasoningEffort } from '@/utils/format'
+import { formatReasoningEffort, formatCompactNumber } from '@/utils/format'
 import { resolveUsageRequestType, requestTypeToLegacyStream } from '@/utils/usageRequestType'
 import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'; import Select from '@/components/common/Select.vue'; import DateRangePicker from '@/components/common/DateRangePicker.vue'
+import GatewayMetricGrid from '@/components/common/GatewayMetricGrid.vue'
+import GatewayTokenMix from '@/components/charts/GatewayTokenMix.vue'
 import UsageStatsCards from '@/components/admin/usage/UsageStatsCards.vue'; import UsageFilters from '@/components/admin/usage/UsageFilters.vue'
 import UsageTable from '@/components/admin/usage/UsageTable.vue'; import UsageExportProgress from '@/components/admin/usage/UsageExportProgress.vue'
 import UserTokenRanking from '@/components/admin/usage/UserTokenRanking.vue'
@@ -214,6 +231,20 @@ type EndpointSource = 'inbound' | 'upstream' | 'path'
 type ModelDistributionSource = 'requested' | 'upstream' | 'mapping'
 const route = useRoute()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
+const usageMetrics = computed(() => {
+  const s = usageStats.value
+  const format = (n: number | undefined, money = false) => typeof n === 'number' && Number.isFinite(n)
+    ? money ? `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : formatCompactNumber(n)
+    : '—'
+  const note = t('usage.inSelectedRange')
+  return [
+    { key: 'usage-requests', label: t('usage.totalRequests'), icon: 'bolt' as const, value: format(s?.total_requests), note },
+    { key: 'usage-tokens', label: t('usage.totalTokens'), icon: 'chart' as const, tone: 'cyan', value: format(s?.total_tokens), note },
+    { key: 'usage-cost', label: t('gatewayUi.standardBilled'), icon: 'creditCard' as const, tone: 'amber', value: format(s?.total_cost, true), note },
+    { key: 'usage-actual', label: t('gatewayUi.actualBilled'), icon: 'creditCard' as const, tone: 'green', value: format(s?.total_actual_cost, true), note }
+  ]
+})
+
 const trendData = ref<TrendDataPoint[]>([]); const requestedModelStats = ref<ModelStat[]>([]); const upstreamModelStats = ref<ModelStat[]>([]); const mappingModelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const modelStatsLoading = ref(false); const granularity = ref<'day' | 'hour'>('hour')
 const modelDistributionMetric = ref<DistributionMetric>('tokens')
 const modelDistributionSource = ref<ModelDistributionSource>('requested')
@@ -370,6 +401,19 @@ const onDateRangeChange = (range: { startDate: string; endDate: string; preset: 
   applyFilters()
 }
 
+function usagePreset(days: number) {
+  const toLocalDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const end = new Date()
+  const start = new Date(end)
+  start.setDate(start.getDate() - days + 1)
+  return { startDate: toLocalDay(start), endDate: toLocalDay(end), preset: null }
+}
+function isUsagePreset(days: number) {
+  const p = usagePreset(days)
+  return p.startDate === startDate.value && p.endDate === endDate.value
+}
+function setUsagePreset(days: number) { onDateRangeChange(usagePreset(days)) }
+
 const buildUsageListParams = (
   page: number,
   pageSize: number,
@@ -401,6 +445,7 @@ const loadLogs = async () => {
 const loadStats = async (force = false) => {
   const seq = ++statsReqSeq
   endpointStatsLoading.value = true
+  usageStats.value = null
   try {
     const requestType = filters.value.request_type
     const legacyStream = requestType ? requestTypeToLegacyStream(requestType) : filters.value.stream
@@ -515,7 +560,11 @@ const loadChartData = async () => {
     if (seq !== chartReqSeq) return
     trendData.value = snapshot.trend || []
     groupStats.value = snapshot.groups || []
-  } catch (error) { console.error('Failed to load chart data:', error) } finally { if (seq === chartReqSeq) chartsLoading.value = false }
+  } catch (error) {
+    if (seq !== chartReqSeq) return
+    trendData.value = []; groupStats.value = []
+    console.error('Failed to load chart data:', error)
+  } finally { if (seq === chartReqSeq) chartsLoading.value = false }
 }
 const applyFilters = () => {
   pagination.page = 1

@@ -1,6 +1,11 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
+    <div v-if="adminSettings.paymentEnabled" class="gateway-related-page">
+      <RouterLink to="/admin/orders/plans" class="btn btn-secondary">
+        <Icon name="creditCard" size="sm" />{{ t('nav.paymentPlans') }}
+      </RouterLink>
+    </div>
+    <TablePageLayout compact class="gateway-subscriptions-page">
       <template #filters>
         <!-- Top Toolbar: Left (search + filters) / Right (actions) -->
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -852,6 +857,7 @@ import BulkSubscriptionActionDialog from '@/components/admin/subscription/BulkSu
 import type { Column } from '@/components/common/types'
 import { formatDateTimeToMinute } from '@/utils/format'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
+import { useAdminSettingsStore } from '@/stores/adminSettings'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -872,6 +878,7 @@ import {
 import { GROUP_PLATFORM_OPTIONS } from '@/constants/platforms'
 
 const { t } = useI18n()
+const adminSettings = useAdminSettingsStore()
 const appStore = useAppStore()
 
 interface GroupOption {

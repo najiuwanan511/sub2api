@@ -1,8 +1,8 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
+    <TablePageLayout compact class="gateway-accounts-page">
       <template #filters>
-        <div class="flex flex-wrap-reverse items-start justify-between gap-3">
+        <div class="gateway-account-toolbar">
           <AccountTableFilters
             v-model:searchQuery="params.search"
             :filters="params"
@@ -12,6 +12,7 @@
             @update:searchQuery="debouncedReload"
           />
           <AccountTableActions
+            class="gateway-account-actions"
             :loading="loading"
             @refresh="handleManualRefresh"
             @create="showCreate = true"
@@ -193,6 +194,8 @@
         />
         <div ref="accountTableRef" class="flex min-h-0 flex-1 flex-col overflow-hidden" :aria-busy="loading" :inert="loading && accounts.length > 0">
         <DataTable
+          compact-mobile-table
+          :table-label="t('admin.accounts.title')"
           ref="dataTableRef"
           :columns="cols"
           :data="accounts"
@@ -203,7 +206,7 @@
           default-sort-key="name"
           default-sort-order="asc"
           :sort-storage-key="ACCOUNT_SORT_STORAGE_KEY"
-          :estimate-row-height="156"
+          :estimate-row-height="64"
           :overscan="5"
           :virtualize-threshold="50"
         >
@@ -304,7 +307,7 @@
             />
           </template>
           <template #cell-groups="{ row }">
-            <AccountGroupsCell :groups="accountGroupsForRow(row)" :max-display="4" />
+            <AccountGroupsCell :groups="accountGroupsForRow(row)" :max-display="4" compact />
           </template>
           <template #header-usage="{ column }">
             <div class="flex items-center">
@@ -490,6 +493,7 @@
 </template>
 
 <script setup lang="ts">
+import { useGatewaySearchStore } from '@/stores/gatewaySearch'
 import { ref, reactive, computed, onMounted, onUnmounted, toRaw, watch } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
@@ -1328,6 +1332,15 @@ const saveAccountFilterValues = () => {
   }
 }
 
+const gatewaySearch = useGatewaySearchStore()
+function applyGatewaySearch() {
+  const term = gatewaySearch.consume('/admin/accounts')
+  if (term === undefined) return false
+  params.search = term
+  return true
+}
+watch(() => gatewaySearch.pending, () => { if (applyGatewaySearch()) debouncedReload() })
+
 const debouncedReload = () => {
   saveAccountFilterValues()
   clearSelection()
@@ -1825,7 +1838,6 @@ const allColumns = computed(() => {
   const c = [
     { key: 'select', label: '', sortable: false },
     { key: 'name', label: t('admin.accounts.columns.name'), sortable: true },
-    { key: 'id', label: t('admin.accounts.columns.id'), sortable: true },
     { key: 'platform_type', label: t('admin.accounts.columns.platformType'), sortable: false },
     { key: 'capacity', label: t('admin.accounts.columns.capacity'), sortable: false },
     { key: 'status', label: t('admin.accounts.columns.status'), sortable: true },
@@ -1846,6 +1858,7 @@ const allColumns = computed(() => {
     { key: 'created_at', label: t('admin.accounts.columns.createdAt'), sortable: true },
     { key: 'expires_at', label: t('admin.accounts.columns.expiresAt'), sortable: true },
     { key: 'notes', label: t('admin.accounts.columns.notes'), sortable: false },
+    { key: 'id', label: t('admin.accounts.columns.id'), sortable: true },
     { key: 'actions', label: t('admin.accounts.columns.actions'), sortable: false }
   )
   return c
@@ -2561,6 +2574,7 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 onMounted(async () => {
+  applyGatewaySearch()
   if (typeof window !== 'undefined') {
     desktopViewportMediaQuery = window.matchMedia(desktopViewportQuery)
     isDesktopViewport.value = desktopViewportMediaQuery.matches

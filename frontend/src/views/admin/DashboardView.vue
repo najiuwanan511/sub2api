@@ -1,6 +1,17 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <div class="gateway-dashboard space-y-6">
+      <GatewayDashboardOverview
+        :stats="stats" :trend="trendData" :groups="groupStats" :models="rankedModels"
+        :granularity="granularity" :start="startDate" :end="endDate"
+        :loading="loading || chartsLoading" :failed="snapshotFailed"
+        :models-loading="rankModelsLoading" :models-failed="rankModelsFailed"
+        :ops-disabled="opsDisabled" :ops-partial="opsPartial"
+        :concurrency="concurrency" :rpm="trafficRpm" :duration="trafficDuration" :error-rate="trafficErrorRate"
+      />
+      <details class="gateway-dashboard-details" @toggle="onDetailsToggle">
+        <summary>{{ t('gatewayUi.details') }}</summary>
+        <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
         <LoadingSpinner />
@@ -8,7 +19,7 @@
 
       <template v-else-if="stats">
         <!-- Row 1: Core Stats -->
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="gateway-metrics grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
           <!-- Total API Keys -->
           <div class="card p-4">
             <div class="flex items-center gap-3">
@@ -96,7 +107,7 @@
         </div>
 
         <!-- Row 2: Token Stats -->
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="gateway-metrics grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
           <!-- Today Tokens -->
           <div class="card p-4">
             <div class="flex items-center gap-3">
@@ -343,22 +354,28 @@
           </div>
         </div>
       </template>
+        </div>
+      </details>
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 
 const { t } = useI18n()
 import { adminAPI } from '@/api/admin'
+import { useAdminSettingsStore } from '@/stores/adminSettings'
+import { opsAPI } from '@/api/admin/ops'
+import GatewayDashboardOverview from '@/components/charts/GatewayDashboardOverview.vue'
 import type {
   DashboardStats,
   TrendDataPoint,
   ModelStat,
+  GroupStat,
   UserUsageTrendPoint,
   UserSpendingRankingItem
 } from '@/types'
@@ -406,6 +423,67 @@ const rankingError = ref(false)
 
 // Chart data
 const trendData = ref<TrendDataPoint[]>([])
+const groupStats = ref<GroupStat[]>([])
+const rankedModels = ref<ModelStat[]>([])
+const snapshotFailed = ref(false)
+const rankModelsLoading = ref(false)
+const rankModelsFailed = ref(false)
+const detailsOpen = ref(false)
+const concurrency = ref<number | null>(null)
+const trafficDuration = ref<number | null>(null)
+const trafficRpm = ref<number | null>(null)
+const trafficErrorRate = ref<number | null>(null)
+const opsPartial = ref(false)
+const adminSettingsStore = useAdminSettingsStore()
+const opsDisabled = computed(() => adminSettingsStore.loaded && (!adminSettingsStore.opsMonitoringEnabled || !adminSettingsStore.opsRealtimeMonitoringEnabled))
+let rankModelSeq = 0
+let opsSeq = 0
+let opsTimer: ReturnType<typeof setInterval> | undefined
+let opsFetching = false
+
+async function loadRankedModels() {
+  const seq = ++rankModelSeq
+  rankModelsLoading.value = true
+  rankModelsFailed.value = false
+  try {
+    const end = new Date()
+    const start = new Date(end)
+    start.setDate(start.getDate() - 29)
+    const data = await adminAPI.dashboard.getModelStats({ start_date: formatLocalDate(start), end_date: formatLocalDate(end) })
+    if (seq === rankModelSeq) rankedModels.value = data.models || []
+  } catch {
+    if (seq === rankModelSeq) { rankedModels.value = []; rankModelsFailed.value = true }
+  } finally {
+    if (seq === rankModelSeq) rankModelsLoading.value = false
+  }
+}
+
+async function loadOps() {
+  if (!adminSettingsStore.loaded || opsDisabled.value || opsFetching || document.visibilityState === 'hidden') return
+  opsFetching = true
+  const seq = ++opsSeq
+  const [slots, overview] = await Promise.allSettled([
+    opsAPI.getConcurrencyStats(), opsAPI.getDashboardOverview({ time_range: '5m' })
+  ])
+  if (seq !== opsSeq) return
+  opsFetching = false
+  const platforms = slots.status === 'fulfilled' && slots.value?.enabled ? slots.value.platform : null
+  const data = overview.status === 'fulfilled' ? overview.value : null
+  concurrency.value = platforms ? Object.values(platforms).reduce((sum, platform) => sum + platform.current_in_use, 0) : null
+  trafficRpm.value = typeof data?.qps?.avg === 'number' ? Math.round(data.qps.avg * 60) : null
+  trafficDuration.value = data?.duration?.avg_ms ?? null
+  trafficErrorRate.value = data?.error_rate ?? null
+  opsPartial.value = concurrency.value === null || trafficRpm.value === null || trafficDuration.value === null || trafficErrorRate.value === null
+}
+watch(() => adminSettingsStore.loaded && !opsDisabled.value, enabled => {
+  if (enabled) void loadOps()
+  else {
+    opsSeq++
+    opsFetching = false
+    concurrency.value = trafficRpm.value = trafficDuration.value = trafficErrorRate.value = null
+    opsPartial.value = false
+  }
+})
 const modelStats = ref<ModelStat[]>([])
 const userTrend = ref<UserUsageTrendPoint[]>([])
 const userTrendMetric = ref<'tokens' | 'actual_cost'>('tokens')
@@ -423,9 +501,10 @@ const formatLocalDate = (date: Date): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-const getLast24HoursRangeDates = (): { start: string; end: string } => {
+const getDefaultRangeDates = (): { start: string; end: string } => {
   const end = new Date()
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+  const start = new Date(end)
+  start.setDate(start.getDate() - 13)
   return {
     start: formatLocalDate(start),
     end: formatLocalDate(end)
@@ -433,8 +512,8 @@ const getLast24HoursRangeDates = (): { start: string; end: string } => {
 }
 
 // Date range
-const granularity = ref<'day' | 'hour'>('hour')
-const defaultRange = getLast24HoursRangeDates()
+const granularity = ref<'day' | 'hour'>('day')
+const defaultRange = getDefaultRangeDates()
 const startDate = ref(defaultRange.start)
 const endDate = ref(defaultRange.end)
 
@@ -661,6 +740,7 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
     loading.value = true
   }
   chartsLoading.value = true
+  snapshotFailed.value = false
   try {
     const response = await adminAPI.dashboard.getSnapshotV2({
       start_date: startDate.value,
@@ -669,7 +749,7 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
       include_stats: includeStats,
       include_trend: true,
       include_model_stats: true,
-      include_group_stats: false,
+      include_group_stats: true,
       include_users_trend: false
     })
     if (currentSeq !== chartLoadSeq) return
@@ -677,9 +757,15 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
       stats.value = response.stats
     }
     trendData.value = response.trend || []
+    groupStats.value = response.groups || []
     modelStats.value = response.models || []
   } catch (error) {
     if (currentSeq !== chartLoadSeq) return
+    snapshotFailed.value = true
+    trendData.value = []
+    groupStats.value = []
+    modelStats.value = []
+    if (includeStats) stats.value = null
     appStore.showError(t('admin.dashboard.failedToLoad'))
     console.error('Error loading dashboard snapshot:', error)
   } finally {
@@ -751,25 +837,32 @@ const loadUserSpendingRanking = async () => {
   }
 }
 
-const loadDashboardStats = async () => {
-  await Promise.all([
-    loadDashboardSnapshot(true),
-    loadUsersTrend(),
-    loadUserSpendingRanking()
-  ])
+function onDetailsToggle(event: Event) {
+  const open = (event.currentTarget as HTMLDetailsElement).open
+  detailsOpen.value = open
+  if (open) void loadDetails()
 }
 
-const loadChartData = async () => {
-  await Promise.all([
-    loadDashboardSnapshot(false),
-    loadUsersTrend(),
-    loadUserSpendingRanking()
-  ])
-}
+const loadDetails = () => Promise.all([loadUsersTrend(), loadUserSpendingRanking()])
+const loadDashboardStats = () => Promise.all([
+  loadDashboardSnapshot(true), loadRankedModels(), loadOps(), ...(detailsOpen.value ? [loadDetails()] : [])
+])
+const loadChartData = () => Promise.all([
+  loadDashboardSnapshot(false), ...(detailsOpen.value ? [loadDetails()] : [])
+])
 
 onMounted(() => {
   void refreshBatchImageAccess()
-  loadDashboardStats()
+  void loadDashboardStats()
+  opsTimer = setInterval(() => { void loadOps() }, 30_000)
+})
+onBeforeUnmount(() => {
+  if (opsTimer) clearInterval(opsTimer)
+  chartLoadSeq++
+  usersTrendLoadSeq++
+  rankingLoadSeq++
+  rankModelSeq++
+  opsSeq++
 })
 </script>
 

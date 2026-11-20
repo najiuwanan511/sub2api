@@ -1,9 +1,9 @@
 <template>
-  <div :class="flat ? 'p-4 sm:p-6' : 'card p-6'">
+  <div :class="compact ? 'gateway-usage-toolbar' : flat ? 'p-4 sm:p-6' : 'card p-6'">
     <!-- Toolbar: left filters (multi-line) + right actions -->
     <div class="flex flex-wrap items-end justify-between gap-4">
       <!-- Left: filters (allowed to wrap to multiple rows) -->
-      <div class="flex flex-1 flex-wrap items-end gap-4">
+      <div class="flex min-w-0 flex-1 flex-wrap items-end gap-3">
         <!-- User Search -->
         <div ref="userSearchRef" class="usage-filter-dropdown relative w-full sm:w-auto sm:min-w-[240px]">
           <label class="input-label">{{ t('admin.usage.userFilter') }}</label>
@@ -78,6 +78,16 @@
           </div>
         </div>
 
+        <!-- Group Filter -->
+        <div class="w-full sm:w-auto sm:min-w-[200px]">
+          <label class="input-label">{{ t('admin.usage.group') }}</label>
+          <Select v-model="filters.group_id" :options="groupOptions" searchable @change="emitChange" />
+        </div>
+        <details v-if="compact" class="gateway-more-filters gateway-usage-extra">
+          <summary class="btn btn-secondary">{{ t('gatewayUi.moreFilters') }}</summary>
+          <div class="gateway-filter-menu" id="gateway-usage-extra-filters"></div>
+        </details>
+        <Teleport to="#gateway-usage-extra-filters" :disabled="!compact" defer>
         <!-- Model Filter -->
         <div class="w-full sm:w-auto sm:min-w-[220px]">
           <label class="input-label">{{ t('usage.model') }}</label>
@@ -168,11 +178,7 @@
           <Select v-model="filters.status_code" :options="statusCodeOptions" @change="emitChange" />
         </div>
 
-        <!-- Group Filter -->
-        <div class="w-full sm:w-auto sm:min-w-[200px]">
-          <label class="input-label">{{ t('admin.usage.group') }}</label>
-          <Select v-model="filters.group_id" :options="groupOptions" searchable @change="emitChange" />
-        </div>
+        </Teleport>
 
       </div>
 
@@ -222,6 +228,7 @@ interface Props {
   mode?: 'usage' | 'errors' | 'ranking'
   /** 嵌入统一卡片内使用：去掉自身卡片外观 */
   flat?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {

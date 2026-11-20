@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <div class="gateway-settings-page">
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div
@@ -9,7 +9,7 @@
       </div>
 
       <!-- Settings Form -->
-      <form v-else @submit.prevent="saveSettings" class="space-y-6" novalidate>
+      <form v-else @submit.prevent="saveSettings" class="gateway-settings-form space-y-6" novalidate>
         <!-- Tab Navigation -->
         <div class="settings-tabs-shell">
           <nav
@@ -44,8 +44,8 @@
           </nav>
         </div>
 
-        <!-- Tab: Security — Admin API Key -->
-        <div v-show="activeTab === 'security'" class="space-y-6">
+        <!-- Tab: Access — Admin API Key -->
+        <div v-show="activeTab === 'access'" class="space-y-6">
           <AdminAccessKeysSettings />
           <!-- 已有全权密钥只提供轮换和删除入口。 -->
           <details v-if="adminApiKeyExists" class="card">
@@ -6350,7 +6350,7 @@
         <!-- Tab: General -->
         <div v-show="activeTab === 'general'" class="space-y-6">
           <!-- Site Settings -->
-          <div class="card">
+          <div class="card gateway-site-settings">
             <div
               class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
@@ -9061,6 +9061,7 @@ type SettingsTab =
   | "agreement"
   | "features"
   | "security"
+  | "access"
   | "users"
   | "gateway"
   | "payment"
@@ -9069,12 +9070,13 @@ type SettingsTab =
 const activeTab = ref<SettingsTab>("general");
 const settingsTabs = [
   { key: "general" as SettingsTab, icon: "home" as const },
-  { key: "agreement" as SettingsTab, icon: "document" as const },
-  { key: "features" as SettingsTab, icon: "bolt" as const },
   { key: "security" as SettingsTab, icon: "shield" as const },
-  { key: "users" as SettingsTab, icon: "user" as const },
   { key: "gateway" as SettingsTab, icon: "server" as const },
   { key: "payment" as SettingsTab, icon: "creditCard" as const },
+  { key: "access" as SettingsTab, icon: "key" as const },
+  { key: "users" as SettingsTab, icon: "user" as const },
+  { key: "agreement" as SettingsTab, icon: "document" as const },
+  { key: "features" as SettingsTab, icon: "bolt" as const },
   { key: "email" as SettingsTab, icon: "mail" as const },
   { key: "backup" as SettingsTab, icon: "database" as const },
 ];

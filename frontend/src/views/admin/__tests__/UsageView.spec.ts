@@ -96,7 +96,8 @@ vi.mock('@/stores/app', () => ({
   }),
 }))
 
-vi.mock('@/utils/format', () => ({
+vi.mock('@/utils/format', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/utils/format')>(),
   formatReasoningEffort: (value: string | null | undefined) => value ?? '-',
 }))
 

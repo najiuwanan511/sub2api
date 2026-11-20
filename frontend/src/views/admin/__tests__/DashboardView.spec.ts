@@ -5,10 +5,11 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { DashboardStats } from '@/types'
 import DashboardView from '../DashboardView.vue'
 
-const { getSnapshotV2, getUserUsageTrend, getUserSpendingRanking } = vi.hoisted(() => ({
+const { getSnapshotV2, getUserUsageTrend, getUserSpendingRanking, getModelStats } = vi.hoisted(() => ({
   getSnapshotV2: vi.fn(),
   getUserUsageTrend: vi.fn(),
-  getUserSpendingRanking: vi.fn()
+  getUserSpendingRanking: vi.fn(),
+  getModelStats: vi.fn()
 }))
 
 vi.mock('vue-chartjs', () => ({
@@ -20,7 +21,8 @@ vi.mock('@/api/admin', () => ({
     dashboard: {
       getSnapshotV2,
       getUserUsageTrend,
-      getUserSpendingRanking
+      getUserSpendingRanking,
+      getModelStats
     }
   }
 }))
@@ -97,6 +99,7 @@ describe('admin DashboardView', () => {
     getSnapshotV2.mockReset()
     getUserUsageTrend.mockReset()
     getUserSpendingRanking.mockReset()
+    getModelStats.mockReset().mockResolvedValue({ models: [] })
 
     getSnapshotV2.mockResolvedValue({
       stats: createDashboardStats(),
@@ -127,24 +130,30 @@ describe('admin DashboardView', () => {
       global: { stubs: {
         AppLayout: { template: '<div><slot /></div>' }, LoadingSpinner: true,
         Icon: true, DateRangePicker: true, Select: true, ModelDistributionChart: true,
-        TokenUsageTrend: true
+        TokenUsageTrend: true, GatewayDashboardOverview: true
       } }
     })
     await flushPromises()
+    expect(getUserUsageTrend).not.toHaveBeenCalled()
+    const details = wrapper.get('.gateway-dashboard-details')
+    Object.defineProperty(details.element, 'open', { value: true })
+    await details.trigger('toggle')
     expect(getUserUsageTrend).toHaveBeenCalledWith(expect.objectContaining({ metric: 'tokens', limit: 12 }))
+    await flushPromises()
     await wrapper.findAll('button').find(button => button.text() === 'admin.dashboard.actualSpending')!.trigger('click')
     expect(getUserUsageTrend).toHaveBeenCalledWith(expect.objectContaining({ metric: 'actual_cost', limit: 12 }))
     await flushPromises()
-    const chart = wrapper.findComponent({ name: 'Line' })
+    const chart = details.findComponent({ name: 'Line' })
     expect(chart.props('data').datasets[0].data).toEqual([5])
     expect(chart.props('options').scales.y.ticks.callback(5)).toBe('$5.00')
     resolveTokens({ trend: [{ date: '2026-01-01', user_id: 1, username: 'tokens', email: '', requests: 1, tokens: 100, cost: 1, actual_cost: 1 }] })
     await flushPromises()
     expect(chart.props('data').datasets[0].data).toEqual([5])
+    wrapper.unmount()
   })
 
-  it('uses last 24 hours as default dashboard range', async () => {
-    mount(DashboardView, {
+  it('uses the last 14 calendar days and requests group cost data', async () => {
+    const wrapper = mount(DashboardView, {
       global: {
         stubs: {
           AppLayout: { template: '<div><slot /></div>' },
@@ -154,6 +163,7 @@ describe('admin DashboardView', () => {
           Select: true,
           ModelDistributionChart: true,
           TokenUsageTrend: true,
+          GatewayDashboardOverview: true,
           Line: true
         }
       }
@@ -162,13 +172,16 @@ describe('admin DashboardView', () => {
     await flushPromises()
 
     const now = new Date()
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const start = new Date(now)
+    start.setDate(start.getDate() - 13)
 
     expect(getSnapshotV2).toHaveBeenCalledTimes(1)
     expect(getSnapshotV2).toHaveBeenCalledWith(expect.objectContaining({
-      start_date: formatLocalDate(yesterday),
+      start_date: formatLocalDate(start),
       end_date: formatLocalDate(now),
-      granularity: 'hour'
+      granularity: 'day',
+      include_group_stats: true
     }))
+    wrapper.unmount()
   })
 })

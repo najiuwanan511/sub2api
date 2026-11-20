@@ -3,7 +3,7 @@
     class="sidebar"
     :class="[
       sidebarCollapsed ? 'w-[72px]' : 'w-64',
-      { '-translate-x-full lg:translate-x-0': !mobileOpen }
+      { '-translate-x-full lg:translate-x-0': !mobileOpen, 'gateway-sidebar': designLayout, 'gateway-sidebar-collapsed': designLayout && sidebarCollapsed, 'gateway-sidebar-open': designLayout && mobileOpen }
     ]"
   >
     <!-- Logo/Brand -->
@@ -14,7 +14,8 @@
         class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-glow transition-opacity hover:opacity-80"
         @click="handleMenuItemClick(homePath)"
       >
-        <img v-if="settingsLoaded" :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
+        <Icon v-if="designLayout && !siteLogo" name="bolt" size="md" aria-hidden="true" />
+        <img v-else-if="settingsLoaded" :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
       </router-link>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
         <router-link
@@ -25,7 +26,9 @@
           {{ siteName }}
         </router-link>
         <!-- Version Badge -->
-        <VersionBadge :version="siteVersion" />
+        <div :class="{ 'gateway-sidebar-version': designLayout }">
+          <VersionBadge :version="siteVersion" /><span v-if="designLayout" aria-hidden="true">· {{ t('gatewayUi.management') }}</span>
+        </div>
       </div>
     </div>
 
@@ -34,8 +37,17 @@
       <!-- Admin View: Admin menu first, then personal menu -->
       <template v-if="isAdmin">
         <!-- Admin Section -->
-        <div class="sidebar-section">
-          <template v-for="item in adminNavItems" :key="item.path">
+        <div v-for="section in adminSections" :key="section.key" class="sidebar-section">
+          <button v-if="section.key === 'more'" type="button" class="sidebar-link gateway-more-toggle w-full"
+            :aria-label="t('gatewayUi.more')" :title="t('gatewayUi.more')" :aria-expanded="!sidebarCollapsed && showMoreTools"
+            @click="toggleMoreTools">
+            <Icon name="grid" size="sm" />
+            <span v-if="!sidebarCollapsed" class="flex-1 text-left">{{ t('gatewayUi.more') }}</span>
+            <Icon v-if="!sidebarCollapsed" name="chevronDown" size="sm" :class="{ 'rotate-180': moreOpen }" />
+          </button>
+          <div v-else-if="section.key && !sidebarCollapsed" class="sidebar-section-title">{{ t(`gatewayUi.${section.key}`) }}</div>
+          <div v-show="section.key !== 'more' || (!sidebarCollapsed && showMoreTools)">
+          <template v-for="item in section.items" :key="item.path">
             <!-- Collapsible group (has children) -->
             <template v-if="item.children?.length">
               <button
@@ -92,6 +104,7 @@
                       ? 'sidebar-wallet'
                       : undefined
               "
+              :data-tour="item.path === '/keys' ? 'sidebar-my-keys' : undefined"
               @click="handleMenuItemClick(item.path)"
             >
               <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
@@ -99,10 +112,11 @@
               <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
             </router-link>
           </template>
+          </div>
         </div>
 
         <!-- Personal Section for Admin (hidden in simple mode) -->
-        <div v-if="!authStore.isSimpleMode" class="sidebar-section">
+        <div v-if="!designLayout && !authStore.isSimpleMode" class="sidebar-section">
           <div class="sidebar-section-title" :class="{ 'sidebar-section-title-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
             <span class="sidebar-section-title-text" :class="{ 'sidebar-section-title-text-collapsed': sidebarCollapsed }">
               {{ t('nav.myAccount') }}
@@ -148,7 +162,18 @@
     </nav>
 
     <!-- Bottom Section -->
-    <div class="mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
+    <div v-if="designLayout" class="gateway-sidebar-bottom">
+      <dl v-if="!sidebarCollapsed" class="gateway-connection" aria-live="polite">
+        <div><dt>{{ t('gatewayUi.backend') }}</dt><dd><span class="gateway-health" :data-status="health">{{ t(`gatewayUi.${health}`) }}</span></dd></div>
+        <div><dt>{{ t('gatewayUi.source') }}</dt><dd>{{ t('gatewayUi.live') }}</dd></div>
+        <div><dt>{{ t('gatewayUi.prefix') }}</dt><dd><code>/api/v1</code></dd></div>
+      </dl>
+      <button type="button" class="sidebar-link w-full" :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
+        :title="t('nav.logout')" :disabled="loggingOut" @click="logout">
+        <Icon name="logOut" size="sm" /> <span v-if="!sidebarCollapsed">{{ t('nav.logout') }}</span>
+      </button>
+    </div>
+    <div v-else class="mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
       <!-- Theme Toggle -->
       <button
         @click="toggleTheme"
@@ -181,7 +206,7 @@
   <transition name="fade">
     <div
       v-if="mobileOpen"
-      class="fixed inset-0 z-30 bg-black/50 lg:hidden"
+      class="fixed inset-0 z-30 bg-black/50 lg:hidden" :class="{ 'gateway-scrim': designLayout }"
       @click="closeMobile"
     ></div>
   </transition>
@@ -199,6 +224,8 @@ import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, makeSidebarFlag } from '@/utils/featureFlags'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
 import { useBatchImageAccess } from '@/composables/useBatchImageAccess'
+import { useGatewayAdminLayout } from '@/composables/useGatewayAdminLayout'
+import { useMediaQuery } from '@vueuse/core'
 
 interface NavItem {
   path: string
@@ -246,7 +273,26 @@ const onboardingStore = useOnboardingStore()
 const adminSettingsStore = useAdminSettingsStore()
 const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 
-const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
+const designLayout = useGatewayAdminLayout()
+const designDesktop = useMediaQuery('(min-width: 861px)')
+const sidebarCollapsed = computed(() => appStore.sidebarCollapsed && (!designLayout.value || designDesktop.value))
+const moreOpen = ref(false)
+const showMoreTools = computed(() => moreOpen.value || onboardingStore.getDriverInstance() !== null)
+const loggingOut = ref(false)
+const health = ref<'checking' | 'online' | 'offline'>('checking')
+watch(designLayout, (active, _, cleanup) => {
+  if (!active) return
+  const controller = new AbortController()
+  health.value = 'checking'
+  let current = true
+  const timer = setTimeout(() => controller.abort(), 4000)
+  cleanup(() => { current = false; clearTimeout(timer); controller.abort() })
+  fetch('/health', { cache: 'no-store', signal: controller.signal })
+    .then(async response => response.ok && (await response.json()).status === 'ok')
+    .then(ok => { if (!controller.signal.aborted) health.value = ok ? 'online' : 'offline' })
+    .catch(() => { if (current) health.value = 'offline' })
+    .finally(() => clearTimeout(timer))
+}, { immediate: true })
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
 const sidebarNavRef = ref<HTMLElement | null>(null)
@@ -866,6 +912,47 @@ const adminNavItems = computed((): NavItem[] => {
   return visible
 })
 
+const adminSections = computed(() => {
+  const admin = adminNavItems.value
+  if (!designLayout.value) return [{ key: '', items: admin }]
+  const items = [...admin, ...(authStore.isSimpleMode ? [] : personalNavItems.value)]
+  const groups = [
+    { key: 'overview', paths: ['/admin/dashboard', '/admin/usage'] },
+    { key: 'resources', paths: ['/admin/accounts', '/keys', '/admin/subscriptions'] },
+    { key: 'management', paths: ['/admin/users', '/admin/settings', '/admin/audit-logs'] }
+  ]
+  const used = new Set(groups.flatMap(group => group.paths))
+  return [
+    ...groups.map(group => ({ key: group.key, items: group.paths.flatMap(path => items.find(item => item.path === path) || []) })),
+    { key: 'more', items: items.filter((item, index) => !used.has(item.path) && items.findIndex(candidate => candidate.path === item.path) === index) }
+  ].filter(section => section.items.length > 0)
+})
+watch([adminSections, () => route.path], ([sections, path]) => {
+  if (sections.find(section => section.key === 'more')?.items.some(item =>
+    item.path === path || item.children?.some(child => child.path === path))) moreOpen.value = true
+}, { immediate: true })
+
+function toggleMoreTools() {
+  if (sidebarCollapsed.value) {
+    appStore.setSidebarCollapsed(false)
+    moreOpen.value = true
+  } else moreOpen.value = !moreOpen.value
+}
+
+async function logout() {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  try {
+    await authStore.logout()
+  } catch (error) {
+    console.error('Logout error:', error)
+  } finally {
+    appStore.setMobileOpen(false)
+    loggingOut.value = false
+    await router.push('/login')
+  }
+}
+
 function toggleSidebar() {
   appStore.toggleSidebar()
 }
@@ -927,7 +1014,10 @@ function toggleGroup(item: NavItem) {
  *   (router-link semantics) and ensure the group is expanded.
  */
 function handleGroupClick(item: NavItem) {
-  if (sidebarCollapsed.value) return
+  if (sidebarCollapsed.value) {
+    if (!designLayout.value) return
+    appStore.setSidebarCollapsed(false)
+  }
   if (item.expandOnly) {
     toggleGroup(item)
     return

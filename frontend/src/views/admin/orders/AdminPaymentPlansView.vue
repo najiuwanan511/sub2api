@@ -1,18 +1,24 @@
 <template>
   <AppLayout>
-    <div class="space-y-4">
-      <!-- Actions -->
-      <div class="flex items-center justify-end gap-2">
+    <section class="card gateway-plan-panel">
+      <header class="gateway-panel-heading">
+        <div><h2>{{ t('payment.admin.plansPageTitle') }}</h2><p>{{ t('payment.admin.plansPageDesc') }}</p></div>
+        <div class="flex flex-wrap items-center gap-2">
+        <RouterLink to="/admin/subscriptions" class="btn btn-secondary">{{ t('nav.subscriptions') }}</RouterLink>
         <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
           <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
         </button>
         <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
-      </div>
+        </div>
+      </header>
 
       <!-- Plans Table -->
       <DataTable :columns="planColumns" :data="plans" :loading="plansLoading">
         <template #cell-name="{ value, row }">
-          <span class="text-sm font-medium" :class="getPlanNameClass(row.group_id)">{{ value }}</span>
+          <div class="min-w-36 max-w-64">
+            <span class="text-sm font-semibold" :class="getPlanNameClass(row.group_id)">{{ value }}</span>
+            <p v-if="row.description" class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400" :title="row.description">{{ row.description }}</p>
+          </div>
         </template>
         <template #cell-group_id="{ value }">
           <span v-if="isGroupMissing(value)" class="text-sm">
@@ -44,6 +50,9 @@
               'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
               value ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600'
             ]"
+            role="switch"
+            :aria-checked="value"
+            :aria-label="`${t('payment.admin.forSale')}: ${row.name}`"
             @click="toggleForSale(row)"
           >
             <span :class="[
@@ -65,7 +74,7 @@
           </div>
         </template>
       </DataTable>
-    </div>
+    </section>
 
     <!-- Plan Edit Dialog -->
     <PlanEditDialog :show="showPlanDialog" :plan="editingPlan" :groups="groups" :payment-config="paymentConfig" @close="showPlanDialog = false" @saved="loadPlans" />
@@ -143,7 +152,6 @@ const editingPlan = ref<SubscriptionPlan | null>(null)
 const deletingPlanId = ref<number | null>(null)
 
 const planColumns = computed((): Column[] => [
-  { key: 'id', label: 'ID' },
   { key: 'name', label: t('payment.admin.planName') },
   { key: 'group_id', label: t('payment.admin.group') },
   { key: 'price', label: t('payment.admin.price') },

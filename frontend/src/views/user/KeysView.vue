@@ -1,6 +1,7 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
+    <GatewayMetricGrid v-if="gatewayKeys" class="gateway-keys-metrics" :metrics="keyMetrics" />
+    <TablePageLayout :compact="gatewayKeys" :class="{ 'gateway-keys-page': gatewayKeys }">
       <template #filters>
         <div class="flex flex-col gap-3">
           <div class="flex flex-wrap items-center gap-3">
@@ -48,9 +49,9 @@
       </template>
 
       <template #actions>
-        <div class="flex justify-end gap-3">
+        <div class="flex flex-wrap justify-end gap-2">
           <button
-            @click="loadApiKeys"
+            @click="refreshKeys"
             :disabled="loading"
             class="btn btn-secondary"
             :title="t('common.refresh')"
@@ -479,9 +480,11 @@
       :show="showCreateModal || showEditModal"
       :title="showEditModal ? t('keys.editKey') : t('keys.createKey')"
       width="normal"
+      :gateway="gatewayKeys"
       @close="closeModals"
     >
       <form id="key-form" @submit.prevent="handleSubmit" class="space-y-5">
+        <p v-if="gatewayKeys && !showEditModal" class="gateway-dialog-note">{{ t('gatewayUi.keyCreateTip') }}</p>
         <div>
           <label class="input-label">{{ t('keys.nameLabel') }}</label>
           <input
@@ -1034,6 +1037,26 @@
       </template>
     </BaseDialog>
 
+    <BaseDialog v-if="createdKey" :show="true" :title="t('gatewayUi.keyCreated')" gateway @close="dismissCreatedKey">
+      <p class="gateway-dialog-note gateway-dialog-warning">{{ t('gatewayUi.keyCreatedTip') }}</p>
+      <dl class="mt-4 space-y-4">
+        <div>
+          <dt class="input-label">API Key</dt>
+          <dd class="flex items-center gap-2">
+            <code class="gateway-key-secret" data-testid="created-key-value">{{ createdKey }}</code>
+            <button type="button" class="btn btn-secondary" @click="copyCreatedKey">{{ t('common.copy') }}</button>
+          </dd>
+        </div>
+        <div>
+          <dt class="input-label">{{ t('gatewayUi.keyBase') }}</dt>
+          <dd><code class="gateway-key-secret">{{ publicSettings?.api_base_url || serviceOrigin }}</code></dd>
+        </div>
+      </dl>
+      <template #footer>
+        <button type="button" class="btn btn-primary" @click="dismissCreatedKey">{{ t('common.close') }}</button>
+      </template>
+    </BaseDialog>
+
     <BulkEditKeysModal
       :show="showBulkEditModal"
       :selected-keys="selectedApiKeys"
@@ -1208,6 +1231,10 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
+import GatewayMetricGrid from '@/components/common/GatewayMetricGrid.vue'
+import { formatCompactNumber } from '@/utils/format'
+import { useGatewaySearchStore } from '@/stores/gatewaySearch'
 	import { ref, reactive, computed, watch, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
 	import { useI18n } from 'vue-i18n'
 	import { useAppStore } from '@/stores/app'
@@ -1234,7 +1261,7 @@ import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, UpdateApiKeyRequest } from '@/types'
 import type { Column } from '@/components/common/types'
-import type { BatchApiKeyUsageStats } from '@/api/usage'
+import type { BatchApiKeyUsageStats, UserDashboardStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
@@ -1268,6 +1295,40 @@ interface GroupOption {
 }
 
 const appStore = useAppStore()
+const authStore = useAuthStore()
+const gatewayKeys = computed(() => authStore.isAdmin)
+const keyDashboard = ref<UserDashboardStats | null>(null)
+let dashboardSeq = 0
+const createdKey = ref<string | null>(null)
+const serviceOrigin = window.location.origin
+const keyMetrics = computed(() => {
+  const summary = keyDashboard.value
+  const value = (n?: number) => typeof n === 'number' && Number.isFinite(n) ? formatCompactNumber(n) : '—'
+  const note = t('gatewayUi.keyScope')
+  return [
+    { key: 'total-keys', label: t('gatewayUi.keyCount'), icon: 'key' as const, value: value(summary?.total_api_keys), note },
+    { key: 'active-keys', label: t('gatewayUi.keyActive'), icon: 'check' as const, tone: 'green', value: value(summary?.active_api_keys), note },
+    { key: 'key-requests', label: t('usage.totalRequests'), icon: 'bolt' as const, tone: 'cyan', value: value(summary?.total_requests), note },
+    { key: 'key-tokens', label: t('usage.totalTokens'), icon: 'chart' as const, tone: 'amber', value: value(summary?.total_tokens), note }
+  ]
+})
+
+function refreshKeys() {
+  void loadApiKeys()
+  void loadKeyDashboard()
+}
+
+async function loadKeyDashboard() {
+  if (!gatewayKeys.value) return
+  const seq = ++dashboardSeq
+  try {
+    const data = await usageAPI.getDashboardStats()
+    if (seq === dashboardSeq) keyDashboard.value = data
+  } catch {
+    if (seq === dashboardSeq) keyDashboard.value = null
+  }
+}
+
 const onboardingStore = useOnboardingStore()
 const { copyToClipboard: clipboardCopy } = useClipboard()
 
@@ -1378,7 +1439,7 @@ const handleSelectionChange = (ids: Array<string | number>) => {
 const handleBulkUpdated = (succeededIds: number[]) => {
   const succeeded = new Set(succeededIds)
   selectedIds.value = selectedIds.value.filter((id) => !succeeded.has(id))
-  loadApiKeys()
+  refreshKeys()
 }
 
 const groups = ref<Group[]>([])
@@ -1503,6 +1564,15 @@ const statusFilterOptions = computed(() => [
   { value: 'quota_exhausted', label: t('keys.status.quota_exhausted') },
   { value: 'expired', label: t('keys.status.expired') }
 ])
+
+const gatewaySearch = useGatewaySearchStore()
+function applyGatewaySearch() {
+  const term = gatewaySearch.consume('/keys')
+  if (term === undefined) return false
+  filterSearch.value = term
+  return true
+}
+watch(() => gatewaySearch.pending, () => { if (applyGatewaySearch()) onFilterChange() })
 
 const onFilterChange = () => {
   selectedIds.value = []
@@ -1891,7 +1961,7 @@ const handleSubmit = async () => {
       appStore.showSuccess(t('keys.keyUpdatedSuccess'))
     } else {
       const customKey = formData.value.use_custom_key ? formData.value.custom_key : undefined
-      await keysAPI.create(
+      const created = await keysAPI.create(
         formData.value.name,
         formData.value.group_id,
         customKey,
@@ -1902,13 +1972,14 @@ const handleSubmit = async () => {
         rateLimitData
       )
       appStore.showSuccess(t('keys.keyCreatedSuccess'))
+      if (gatewayKeys.value && typeof created?.key === 'string' && created.key) createdKey.value = created.key
       // Only advance tour if active, on submit step, and creation succeeded
-      if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {
+      if (!createdKey.value && onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {
         onboardingStore.nextStep(500)
       }
     }
     closeModals()
-    loadApiKeys()
+    refreshKeys()
   } catch (error: any) {
     const errorMsg = error.response?.data?.detail || t('keys.failedToSave')
     appStore.showError(errorMsg)
@@ -1930,12 +2001,20 @@ const handleDelete = async () => {
     await keysAPI.delete(selectedKey.value.id)
     appStore.showSuccess(t('keys.keyDeletedSuccess'))
     showDeleteDialog.value = false
-    loadApiKeys()
+    refreshKeys()
   } catch (error: any) {
     // 优先使用后端返回的错误消息，提供更具体的错误信息给用户
     const errorMsg = error?.message || t('keys.failedToDelete')
     appStore.showError(errorMsg)
   }
+}
+
+const dismissCreatedKey = () => {
+  createdKey.value = null
+  if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) onboardingStore.nextStep(500)
+}
+const copyCreatedKey = () => {
+  if (createdKey.value) void clipboardCopy(createdKey.value, t('keys.copied'))
 }
 
 const closeModals = () => {
@@ -2098,8 +2177,9 @@ function formatResetTime(resetAt: string | null): string {
 }
 
 onMounted(() => {
+  applyGatewaySearch()
   loadSavedColumns()
-  loadApiKeys()
+  refreshKeys()
   loadGroups()
   loadUserGroupRates()
   loadPublicSettings()
@@ -2108,6 +2188,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  dashboardSeq++
+  createdKey.value = null
   document.removeEventListener('click', closeGroupSelector)
   if (resetTimer) clearInterval(resetTimer)
 })

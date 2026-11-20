@@ -1,6 +1,6 @@
 <template>
-  <div class="card p-4">
-    <h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">
+  <div :class="embedded ? 'gateway-trend-embedded' : 'card p-4'">
+    <h3 v-if="!embedded" class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">
       {{ t('admin.dashboard.tokenUsageTrend') }}
     </h3>
     <div v-if="loading" class="flex h-48 items-center justify-center">
@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Chart as ChartJS,
@@ -52,11 +52,16 @@ const { t } = useI18n()
 const props = defineProps<{
   trendData: TrendDataPoint[]
   loading?: boolean
+  embedded?: boolean
 }>()
 
-const isDarkMode = computed(() => {
-  return document.documentElement.classList.contains('dark')
+const isDarkMode = ref(document.documentElement.classList.contains('dark'))
+let observer: MutationObserver | undefined
+onMounted(() => {
+  observer = new MutationObserver(() => { isDarkMode.value = document.documentElement.classList.contains('dark') })
+  observer.observe(document.documentElement, { attributeFilter: ['class'] })
 })
+onBeforeUnmount(() => observer?.disconnect())
 
 const chartColors = computed(() => ({
   text: isDarkMode.value ? '#e5e7eb' : '#374151',
@@ -75,7 +80,7 @@ const chartData = computed(() => {
     labels: props.trendData.map((d) => d.date),
     datasets: [
       {
-        label: 'Input',
+        label: t('gatewayUi.tokenInput'),
         data: props.trendData.map((d) => d.input_tokens),
         borderColor: chartColors.value.input,
         backgroundColor: `${chartColors.value.input}20`,
@@ -83,7 +88,7 @@ const chartData = computed(() => {
         tension: 0.3
       },
       {
-        label: 'Output',
+        label: t('gatewayUi.tokenOutput'),
         data: props.trendData.map((d) => d.output_tokens),
         borderColor: chartColors.value.output,
         backgroundColor: `${chartColors.value.output}20`,
@@ -91,7 +96,7 @@ const chartData = computed(() => {
         tension: 0.3
       },
       {
-        label: 'Cache Creation',
+        label: t('usage.cacheCreationTokensLabel'),
         data: props.trendData.map((d) => d.cache_creation_tokens),
         borderColor: chartColors.value.cacheCreation,
         backgroundColor: `${chartColors.value.cacheCreation}20`,
@@ -99,7 +104,7 @@ const chartData = computed(() => {
         tension: 0.3
       },
       {
-        label: 'Cache Read',
+        label: t('usage.cacheReadTokensLabel'),
         data: props.trendData.map((d) => d.cache_read_tokens),
         borderColor: chartColors.value.cacheRead,
         backgroundColor: `${chartColors.value.cacheRead}20`,
@@ -107,7 +112,7 @@ const chartData = computed(() => {
         tension: 0.3
       },
       {
-        label: 'Cache Hit Rate',
+        label: t('gatewayUi.cacheHitRate'),
         data: props.trendData.map((d) => {
           const totalPromptTokens = d.input_tokens + d.cache_read_tokens + d.cache_creation_tokens
           return totalPromptTokens > 0 ? (d.cache_read_tokens / totalPromptTokens) * 100 : 0
@@ -125,6 +130,7 @@ const chartData = computed(() => {
 
 const lineOptions = computed(() => ({
   responsive: true,
+  ...(props.embedded ? { animation: false as const } : {}),
   maintainAspectRatio: false,
   interaction: {
     intersect: false,

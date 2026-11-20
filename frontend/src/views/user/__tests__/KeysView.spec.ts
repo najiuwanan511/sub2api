@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
@@ -271,6 +272,7 @@ const getButtonByText = (wrapper: VueWrapper, text: string) => {
 
 describe('user KeysView column settings', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     localStorage.clear()
 
     listKeys.mockReset()

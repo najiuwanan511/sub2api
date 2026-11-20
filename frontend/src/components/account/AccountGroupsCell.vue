@@ -1,5 +1,5 @@
 <template>
-  <div v-if="groups && groups.length > 0" class="relative max-w-56">
+  <div v-if="groups && groups.length > 0" class="relative max-w-56" :class="{ 'min-w-32': compact }">
     <!-- 限制列宽但不裁切行高，完整显示分组名称和 +N 按钮 -->
     <div class="flex flex-wrap gap-1">
       <GroupBadge
@@ -10,7 +10,7 @@
         :subscription-type="group.subscription_type"
         :rate-multiplier="group.rate_multiplier"
         :show-rate="false"
-        :truncate="false"
+        :truncate="compact" :title="compact ? group.name : undefined"
         class="min-w-0 max-w-full"
       />
       <!-- 更多数量徽章 -->
@@ -88,6 +88,7 @@ import type { Group } from '@/types'
 
 interface Props {
   groups: Group[] | null | undefined
+  compact?: boolean
   maxDisplay?: number
 }
 

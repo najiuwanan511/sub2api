@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hasProviders" class="space-y-4">
+  <div v-if="hasProviders" class="space-y-4 gateway-oauth-unwrap">
     <div v-if="showDivider" class="flex items-center gap-3">
       <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
       <span class="text-xs text-gray-500 dark:text-dark-400">
@@ -8,18 +8,19 @@
       <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
     </div>
 
-    <div :class="providerGridClass">
+    <div :class="providerGridClass" class="gateway-oauth-unwrap">
       <button
         v-for="provider in visibleProviders"
         :key="provider"
         type="button"
         :disabled="disabled"
         class="btn btn-secondary h-12 w-full justify-center gap-2"
+        :title="providerLabel(provider)"
         @click="startLogin(provider)"
       >
         <GitHubMark v-if="provider === 'github'" class="h-5 w-5 text-gray-800 dark:text-gray-100" />
         <GoogleMark v-else class="h-5 w-5" />
-        <span class="font-medium">{{ providerLabel(provider) }}</span>
+        <span class="font-medium gateway-provider-text">{{ providerLabel(provider) }}</span>
       </button>
     </div>
   </div>

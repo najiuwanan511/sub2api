@@ -1,6 +1,6 @@
 <template>
-  <div class="space-y-4">
-    <button type="button" :disabled="disabled" class="btn btn-secondary w-full" @click="startLogin">
+  <div class="space-y-4 gateway-oauth-unwrap">
+    <button type="button" :disabled="disabled" class="btn btn-secondary w-full" :title="t('auth.dingtalk.signIn')" @click="startLogin">
       <svg
         class="icon mr-2"
         viewBox="0 0 24 24"
@@ -21,7 +21,7 @@
           text-anchor="middle"
         >D</text>
       </svg>
-      {{ t('auth.dingtalk.signIn') }}
+      <span class="gateway-provider-text">{{ t('auth.dingtalk.signIn') }}</span>
     </button>
 
     <div v-if="showDivider" class="flex items-center gap-3">

@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
+    <TablePageLayout compact class="gateway-users-page">
       <!-- Single Row: Search, Filters, and Actions -->
       <template #filters>
         <div class="flex flex-wrap items-center gap-3">
@@ -290,16 +290,10 @@
           @sort="handleSort"
           @update:selected-keys="handleSelectedKeysUpdate"
         >
-          <template #cell-email="{ value }">
-            <div class="flex items-center gap-2">
-              <div
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30"
-              >
-                <span class="text-sm font-medium text-primary-700 dark:text-primary-300">
-                  {{ value.charAt(0).toUpperCase() }}
-                </span>
-              </div>
-              <span class="font-medium text-gray-900 dark:text-white">{{ value }}</span>
+          <template #cell-email="{ value, row }">
+            <div class="min-w-36 max-w-56">
+              <div class="truncate font-semibold text-gray-900 dark:text-white" :title="row.username || value">{{ row.username || value || '—' }}</div>
+              <div v-if="row.username && value" class="truncate text-xs text-gray-500 dark:text-gray-400" :title="value">{{ value }}</div>
             </div>
           </template>
 
@@ -792,7 +786,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useGatewaySearchStore } from '@/stores/gatewaySearch'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
@@ -1653,6 +1648,15 @@ const handleBulkLimitsSuccess = async () => {
   await loadUsers()
 }
 
+const gatewaySearch = useGatewaySearchStore()
+function applyGatewaySearch() {
+  const term = gatewaySearch.consume('/admin/users')
+  if (term === undefined) return false
+  searchQuery.value = term
+  return true
+}
+watch(() => gatewaySearch.pending, () => { if (applyGatewaySearch()) handleSearch() })
+
 let searchTimeout: ReturnType<typeof setTimeout>
 const handleSearch = () => {
   clearTimeout(searchTimeout)
@@ -1892,6 +1896,7 @@ onMounted(async () => {
   await loadAttributeDefinitions()
   loadSavedFilters()
   loadSavedColumns()
+  applyGatewaySearch()
   loadUsers()
   if (hasVisibleGroupsColumn.value || visibleFilters.has('group')) {
     loadAllGroups()

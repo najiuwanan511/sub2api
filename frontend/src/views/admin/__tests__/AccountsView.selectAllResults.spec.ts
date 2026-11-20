@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
@@ -142,6 +143,7 @@ const mountView = () => mount(AccountsView, {
 
 describe('admin AccountsView select all filtered results', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     localStorage.clear()
     listAccounts.mockReset()
     listWithEtag.mockReset()

@@ -55,6 +55,7 @@ const icons = {
 
   // Navigation & Arrows
   arrowRight: 'M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3',
+  logOut: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m6 14 5-5-5-5m5 5H9',
   arrowLeft: 'M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18',
   arrowUp: 'M5 10l7-7m0 0l7 7m-7-7v18',
   arrowDown: 'M19 14l-7 7m0 0l-7-7m7 7V3',

@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="modal-overlay"
+        :class="{ 'gateway-dialog': gateway }"
         :style="zIndexStyle"
         :aria-labelledby="dialogId"
         role="dialog"
@@ -63,6 +64,7 @@ type DialogWidth = 'narrow' | 'normal' | 'wide' | 'extra-wide' | 'full'
 
 interface Props {
   show: boolean
+  gateway?: boolean
   title: string
   width?: DialogWidth
   closeOnEscape?: boolean

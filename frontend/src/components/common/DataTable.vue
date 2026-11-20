@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isDesktopViewport" class="space-y-3">
+  <div v-if="!isDesktopViewport && !compactMobileTable" class="space-y-3">
     <template v-if="loading">
       <div v-for="i in 5" :key="i" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
         <div class="space-y-3">
@@ -94,6 +94,8 @@
     v-else
     ref="tableWrapperRef"
     class="table-wrapper"
+    :tabindex="compactMobileTable ? 0 : undefined"
+    :aria-label="compactMobileTable ? tableLabel : undefined"
     :class="{
       'actions-expanded': actionsExpanded,
       'is-scrollable': isScrollable
@@ -431,6 +433,8 @@ onUnmounted(() => {
 
 interface Props {
   columns: Column[]
+  compactMobileTable?: boolean
+  tableLabel?: string
   data: any[]
   loading?: boolean
   stickyFirstColumn?: boolean
@@ -754,7 +758,7 @@ const toggleAllVisible = (checked: boolean) => {
 // 是否启用虚拟化:仅桌面端且行数超过阈值时开启。小列表全量渲染,彻底绕开虚拟器的
 // 估算/测量/滚动补偿链路,消除可变行高导致的滚动抖动。
 const shouldVirtualize = computed(() =>
-  isDesktopViewport.value && (sortedData.value?.length ?? 0) > (props.virtualizeThreshold ?? 100)
+  (isDesktopViewport.value || props.compactMobileTable) && (sortedData.value?.length ?? 0) > (props.virtualizeThreshold ?? 100)
 )
 
 const rowVirtualizer = useVirtualizer(computed(() => ({

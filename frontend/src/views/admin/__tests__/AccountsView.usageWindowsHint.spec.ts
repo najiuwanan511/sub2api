@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
@@ -133,6 +134,7 @@ function mountView() {
 
 describe('admin AccountsView usage windows hint', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     localStorage.clear()
 
     listAccounts.mockReset()

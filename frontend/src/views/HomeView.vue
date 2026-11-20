@@ -16,7 +16,7 @@
   <div
     v-else-if="compactHomeEnabled"
     data-testid="compact-home"
-    class="flex min-h-screen flex-col bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white"
+    class="gateway-home flex min-h-screen flex-col bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white"
   >
     <header class="border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-dark-800">
       <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 sm:gap-4">
@@ -93,10 +93,10 @@
   <!-- Default Home Page -->
   <div
     v-else
-    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
+    class="gateway-home relative flex min-h-screen flex-col overflow-hidden"
   >
     <!-- Background Decorations -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
+    <div class="gateway-grid pointer-events-none absolute inset-0 overflow-hidden">
       <div
         class="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-primary-400/20 blur-3xl"
       ></div>
@@ -115,17 +115,18 @@
     </div>
 
     <!-- Header -->
-    <header class="relative z-20 px-6 py-4">
+    <header class="gateway-topbar relative z-20 px-4 py-4 sm:px-6">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
-        <div class="flex items-center">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
+        <div class="flex min-w-0 items-center gap-2.5 pr-3">
+          <div class="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
             <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
           </div>
+          <span class="truncate text-sm font-semibold">{{ siteName }}</span>
         </div>
 
         <!-- Nav Actions -->
-        <div class="flex items-center gap-3">
+        <div class="flex shrink-0 items-center gap-0.5 sm:gap-3">
           <!-- Language Switcher -->
           <LocaleSwitcher />
 
@@ -200,14 +201,15 @@
     </header>
 
     <!-- Main Content -->
-    <main class="relative z-10 flex-1 px-6 py-16">
+    <main class="relative z-10 flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div class="mx-auto max-w-6xl">
         <!-- Hero Section - Left/Right Layout -->
-        <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
+        <div class="gateway-hero mb-8 grid items-center gap-8 px-5 py-10 sm:px-10 lg:grid-cols-2 lg:px-12 lg:py-16">
           <!-- Left: Text Content -->
-          <div class="flex-1 text-center lg:text-left">
+          <div class="min-w-0 text-center lg:text-left">
+            <p class="gateway-eyebrow mb-4 text-xs font-semibold tracking-widest"><span aria-hidden="true"></span> AI API GATEWAY</p>
             <h1
-              class="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
+              class="mb-4 text-4xl font-bold tracking-tight [overflow-wrap:anywhere] md:text-5xl lg:text-6xl"
             >
               {{ siteName }}
             </h1>
@@ -219,7 +221,7 @@
             <div>
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
+                class="btn btn-primary gateway-cta px-6 py-3 text-sm"
               >
                 {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
                 <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
@@ -228,7 +230,7 @@
           </div>
 
           <!-- Right: Terminal Animation -->
-          <div class="flex flex-1 justify-center lg:justify-end">
+          <div class="flex min-w-0 justify-center lg:justify-end">
             <div class="terminal-container">
               <div class="terminal-window">
                 <!-- Window header -->
@@ -238,7 +240,7 @@
                     <span class="btn-minimize"></span>
                     <span class="btn-maximize"></span>
                   </div>
-                  <span class="terminal-title">terminal</span>
+                  <span class="terminal-title">API EXAMPLE</span>
                 </div>
                 <!-- Terminal content -->
                 <div class="terminal-body">
@@ -294,7 +296,7 @@
         </div>
 
         <!-- Features Grid -->
-        <div class="mb-12 grid gap-6 md:grid-cols-3">
+        <div class="gateway-features mb-12 grid gap-4 md:grid-cols-3">
           <!-- Feature 1: Unified Gateway -->
           <div
             class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"

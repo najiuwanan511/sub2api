@@ -1,17 +1,17 @@
 <template>
-  <header class="glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50">
+  <header class="glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50" :class="{ 'gateway-topbar-admin': designLayout }">
     <div class="flex h-16 items-center justify-between gap-2 px-2 sm:px-4 md:px-6">
       <!-- Left: Mobile Menu Toggle + Page Title -->
       <div class="flex shrink-0 items-center gap-2 sm:gap-4">
         <button
-          @click="toggleMobileSidebar"
-          class="btn-ghost btn-icon lg:hidden"
+          @click="toggleMenu"
+          class="btn-ghost btn-icon" :class="designLayout ? 'gateway-menu-toggle' : 'lg:hidden'"
           :aria-label="t('common.toggleMenu')"
         >
           <Icon name="menu" size="md" />
         </button>
 
-        <div class="hidden lg:block">
+        <div :class="designLayout ? 'gateway-page-heading' : 'hidden lg:block'">
           <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
             {{ pageTitle }}
           </h1>
@@ -23,12 +23,18 @@
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
       <div class="flex min-w-0 items-center gap-1 sm:gap-3">
-        <!-- Announcement Bell -->
+        <form v-if="designLayout" class="gateway-search" role="search" @submit.prevent="submitSearch">
+          <Icon name="search" size="sm" aria-hidden="true" />
+          <input v-model="searchTerm" type="search" autocomplete="off" maxlength="128" :aria-label="t('gatewayUi.search')" :placeholder="t('gatewayUi.search')" :title="t('gatewayUi.searchHint')" />
+        </form>
+        <button v-if="designLayout" type="button" class="gw-icon-button" :aria-label="t(isDark ? 'nav.lightMode' : 'nav.darkMode')" @click="toggleTheme">
+          <Icon :name="isDark ? 'sun' : 'moon'" size="md" />
+        </button>
         <AnnouncementBell v-if="user" />
 
         <!-- Docs Link -->
         <a
-          v-if="docUrl"
+          v-if="docUrl && !designLayout"
           :href="docUrl"
           target="_blank"
           rel="noopener noreferrer"
@@ -40,7 +46,7 @@
 
         <!-- Model Plaza Entry (icon only below sm) -->
         <router-link
-          v-if="user && modelPlazaEnabled"
+          v-if="user && modelPlazaEnabled && !designLayout"
           :to="{ path: '/model-plaza', query: { embedded: '1' } }"
           :title="t('nav.modelPlaza')"
           :aria-label="t('nav.modelPlaza')"
@@ -51,14 +57,14 @@
         </router-link>
 
         <!-- Language Switcher -->
-        <LocaleSwitcher />
+        <LocaleSwitcher v-if="!designLayout" />
 
         <!-- Subscription Progress (for users with active subscriptions; not mounted at all when the feature is off) -->
-        <SubscriptionProgressMini v-if="user && subscriptionFeatureEnabled" />
+        <SubscriptionProgressMini v-if="user && subscriptionFeatureEnabled && !designLayout" />
 
         <!-- Balance Display -->
         <div
-          v-if="user"
+          v-if="user && !designLayout"
           class="group relative hidden items-center gap-2 rounded-xl bg-primary-50 px-3 py-1.5 dark:bg-primary-900/20 sm:flex"
         >
           <svg
@@ -110,7 +116,7 @@
             class="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-dark-800"
             :aria-label="t('common.userMenu')"
           >
-            <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-sm font-medium text-white shadow-sm">
+            <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-sm font-medium text-white shadow-sm" :class="{ 'gateway-avatar': designLayout }">
               <img
                 v-if="avatarUrl"
                 :src="avatarUrl"
@@ -119,7 +125,7 @@
               >
               <span v-else>{{ userInitials }}</span>
             </div>
-            <div class="hidden text-left md:block">
+            <div v-if="!designLayout" class="hidden text-left md:block">
               <div class="text-sm font-medium text-gray-900 dark:text-white">
                 {{ displayName }}
               </div>
@@ -127,7 +133,7 @@
                 {{ t('admin.users.roles.' + user.role) }}
               </div>
             </div>
-            <Icon name="chevronDown" size="sm" class="hidden text-gray-400 md:block" />
+            <Icon v-if="!designLayout" name="chevronDown" size="sm" class="hidden text-gray-400 md:block" />
           </button>
 
           <!-- Dropdown Menu -->
@@ -141,8 +147,12 @@
                 <div class="text-xs text-gray-500 dark:text-dark-400">{{ user.email }}</div>
               </div>
 
-              <!-- Balance (mobile only) -->
-              <div class="border-b border-gray-100 px-4 py-2 dark:border-dark-700 sm:hidden">
+              <div v-if="designLayout" class="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-dark-700">
+                <LocaleSwitcher />
+                <a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer" class="px-2 text-sm">{{ t('nav.docs') }}</a>
+              </div>
+              <!-- Balance (mobile / redesigned admin) -->
+              <div class="border-b border-gray-100 px-4 py-2 dark:border-dark-700" :class="{ 'sm:hidden': !designLayout }">
                 <div class="text-xs text-gray-500 dark:text-dark-400">
                   {{ t('common.balance') }}
                 </div>
@@ -265,6 +275,9 @@ import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import { resolveRouteMetaKeys } from '@/router/title'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
+import { useGatewayTheme } from '@/composables/useGatewayTheme'
+import { useGatewayAdminLayout } from '@/composables/useGatewayAdminLayout'
+import { useGatewaySearchStore } from '@/stores/gatewaySearch'
 
 const router = useRouter()
 const route = useRoute()
@@ -273,6 +286,22 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const adminSettingsStore = useAdminSettingsStore()
 const onboardingStore = useOnboardingStore()
+
+const designLayout = useGatewayAdminLayout()
+const { isDark, toggleTheme } = useGatewayTheme()
+const gatewaySearch = useGatewaySearchStore()
+const searchTerm = ref('')
+function submitSearch() {
+  const input = searchTerm.value.trim()
+  const keyPrefix = /^(?:key|密钥)[:：]\s*/i
+  const term = input.replace(keyPrefix, '').trim()
+  if (!term) return
+  const target = keyPrefix.test(input) ? '/keys' : (!authStore.isSimpleMode && term.includes('@')) ? '/admin/users' : '/admin/accounts'
+  // The term may include an email. Keep it in memory rather than in URL/history.
+  gatewaySearch.submit(target, term)
+  void router.push(target)
+  searchTerm.value = ''
+}
 
 const user = computed(() => authStore.user)
 const dropdownOpen = ref(false)
@@ -322,6 +351,7 @@ const routeMetaKeys = computed(() => resolveRouteMetaKeys(route, {
 }))
 
 const pageTitle = computed(() => {
+  if (designLayout.value && route.path === '/admin/dashboard') return t('nav.dashboard')
   // For custom pages, use the menu item's label instead of generic "自定义页面"
   if (route.name === 'CustomPage') {
     const id = route.params.id as string
@@ -338,6 +368,7 @@ const pageTitle = computed(() => {
 })
 
 const pageDescription = computed(() => {
+  if (designLayout.value && route.path === '/admin/dashboard') return t('gatewayUi.dashboardSubtitle')
   const descKey = routeMetaKeys.value.descriptionKey
   if (descKey) {
     return t(descKey)
@@ -345,8 +376,9 @@ const pageDescription = computed(() => {
   return (route.meta.description as string) || ''
 })
 
-function toggleMobileSidebar() {
-  appStore.toggleMobileSidebar()
+function toggleMenu() {
+  if (designLayout.value && window.matchMedia('(min-width: 861px)').matches) appStore.toggleSidebar()
+  else appStore.toggleMobileSidebar()
 }
 
 function toggleDropdown() {

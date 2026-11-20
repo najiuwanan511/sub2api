@@ -1,13 +1,13 @@
 <template>
-  <AuthLayout>
+  <AuthLayout split>
     <div class="space-y-6">
       <!-- Title -->
-      <div class="text-center">
+      <div class="gateway-login-heading">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ t('auth.welcomeBack') }}
+          {{ t('gatewayUi.login') }}
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
-          {{ t('auth.signInToAccount') }}
+          {{ t('gatewayUi.loginDesc') }}
         </p>
       </div>
       <!-- Login Form -->
@@ -159,39 +159,41 @@
             {{ passkeyLoading ? t('auth.passkeySigningIn') : t('auth.passkeySignIn') }}
           </button>
 
-          <EmailOAuthButtons
-            :disabled="authActionDisabled"
-            :github-enabled="githubOAuthEnabled"
-            :google-enabled="googleOAuthEnabled"
-            :show-divider="false"
-            @start="handleOAuthStart"
-          />
-
-          <LinuxDoOAuthSection
-            v-if="linuxdoOAuthEnabled"
-            :disabled="authActionDisabled"
-            :show-divider="false"
-            @start="handleOAuthStart"
-          />
-          <DingTalkOAuthSection
-            v-if="dingtalkOAuthEnabled"
-            :disabled="authActionDisabled"
-            :show-divider="false"
-            @start="handleOAuthStart"
-          />
-          <WechatOAuthSection
-            v-if="wechatOAuthEnabled"
-            :disabled="authActionDisabled"
-            :show-divider="false"
-            @start="handleOAuthStart"
-          />
-          <OidcOAuthSection
-            v-if="oidcOAuthEnabled"
-            :disabled="authActionDisabled"
-            :provider-name="oidcOAuthProviderName"
-            :show-divider="false"
-            @start="handleOAuthStart"
-          />
+          <div v-if="showOAuthLogin" class="gateway-oauth-grid">
+            <EmailOAuthButtons
+              :disabled="authActionDisabled"
+              :github-enabled="githubOAuthEnabled"
+              :google-enabled="googleOAuthEnabled"
+              :show-divider="false"
+              @start="handleOAuthStart"
+            />
+  
+            <LinuxDoOAuthSection
+              v-if="linuxdoOAuthEnabled"
+              :disabled="authActionDisabled"
+              :show-divider="false"
+              @start="handleOAuthStart"
+            />
+            <DingTalkOAuthSection
+              v-if="dingtalkOAuthEnabled"
+              :disabled="authActionDisabled"
+              :show-divider="false"
+              @start="handleOAuthStart"
+            />
+            <WechatOAuthSection
+              v-if="wechatOAuthEnabled"
+              :disabled="authActionDisabled"
+              :show-divider="false"
+              @start="handleOAuthStart"
+            />
+            <OidcOAuthSection
+              v-if="oidcOAuthEnabled"
+              :disabled="authActionDisabled"
+              :provider-name="oidcOAuthProviderName"
+              :show-divider="false"
+              @start="handleOAuthStart"
+            />
+          </div>
         </div>
       </form>
     </div>

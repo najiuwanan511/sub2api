@@ -1,12 +1,12 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
+    <TablePageLayout compact class="gateway-auditlog-page">
       <!-- Filters -->
       <template #filters>
-        <div class="card p-4 sm:p-6">
+        <div class="gateway-audit-filters">
           <div class="flex flex-wrap items-end justify-between gap-4">
             <!-- Left: filter fields -->
-            <div class="flex flex-1 flex-wrap items-end gap-4">
+            <div class="flex min-w-0 flex-1 flex-wrap items-end gap-3">
               <div class="w-full sm:w-auto sm:min-w-[240px]">
                 <label class="input-label">{{ t('admin.audit.filters.q') }}</label>
                 <div class="relative">
@@ -25,37 +25,34 @@
                 </div>
               </div>
 
-              <div class="w-full sm:w-auto sm:min-w-[200px]">
-                <label class="input-label">{{ t('admin.audit.filters.actorEmail') }}</label>
-                <input v-model.trim="filters.actor_email" type="text" class="input" @keyup.enter="search" />
-              </div>
-
-              <div class="w-full sm:w-auto sm:min-w-[180px]">
-                <label class="input-label">{{ t('admin.audit.filters.action') }}</label>
-                <input v-model.trim="filters.action" type="text" class="input" @keyup.enter="search" />
-              </div>
-
-              <div class="w-full sm:w-auto sm:min-w-[160px]">
-                <label class="input-label">{{ t('admin.audit.filters.clientIp') }}</label>
-                <input v-model.trim="filters.client_ip" type="text" class="input" @keyup.enter="search" />
-              </div>
-
               <div class="w-full sm:w-auto sm:min-w-[140px]">
                 <label class="input-label">{{ t('admin.audit.filters.method') }}</label>
                 <Select v-model="filters.method" :options="methodOptions" @change="search" />
               </div>
-
-              <div class="w-full sm:w-auto sm:min-w-[170px]">
-                <label class="input-label">{{ t('admin.audit.filters.authMethod') }}</label>
-                <Select v-model="filters.auth_method" :options="authMethodOptions" @change="search" />
-              </div>
-
               <div class="w-full sm:w-auto sm:min-w-[140px]">
                 <label class="input-label">{{ t('admin.audit.filters.result') }}</label>
                 <Select v-model="filters.success" :options="resultOptions" @change="search" />
               </div>
-
-              <div class="w-full sm:w-auto sm:min-w-[170px]">
+              <details class="gateway-more-filters self-end" :class="{ 'gateway-filters-active': filters.actor_email || filters.action || filters.client_ip || filters.auth_method || timeRange }">
+                <summary class="btn btn-secondary">{{ t('gatewayUi.moreFilters') }}</summary>
+                <div class="gateway-filter-menu gateway-audit-menu">
+              <div>
+                <label class="input-label">{{ t('admin.audit.filters.actorEmail') }}</label>
+                <input v-model.trim="filters.actor_email" type="text" class="input" @keyup.enter="search" />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.audit.filters.action') }}</label>
+                <input v-model.trim="filters.action" type="text" class="input" @keyup.enter="search" />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.audit.filters.clientIp') }}</label>
+                <input v-model.trim="filters.client_ip" type="text" class="input" @keyup.enter="search" />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.audit.filters.authMethod') }}</label>
+                <Select v-model="filters.auth_method" :options="authMethodOptions" @change="search" />
+              </div>
+              <div>
                 <label class="input-label">{{ t('admin.dashboard.timeRange') }}</label>
                 <Select
                   :model-value="timeRange"
@@ -63,6 +60,8 @@
                   @update:model-value="handleTimeRangeChange"
                 />
               </div>
+                </div>
+              </details>
             </div>
 
             <!-- Right: actions -->
@@ -111,6 +110,15 @@
             </div>
           </template>
 
+          <template #cell-path="{ row }">
+            <div class="flex items-center gap-2 font-mono text-xs">
+              <span class="text-gray-500 dark:text-gray-400">{{ row.method }}</span>
+              <span class="block max-w-56 truncate" :title="row.path">{{ row.path || '—' }}</span>
+            </div>
+          </template>
+          <template #cell-request_id="{ value }">
+            <span class="block max-w-28 truncate font-mono text-xs" :title="value">{{ value || '—' }}</span>
+          </template>
           <template #cell-status_code="{ row }">
             <span :class="statusBadgeClass(row.status_code)">
               <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(row.status_code)"></span>
@@ -467,9 +475,11 @@ const columns = computed<Column[]>(() => [
   { key: 'created_at', label: t('admin.audit.columns.time') },
   { key: 'actor', label: t('admin.audit.columns.actor') },
   { key: 'action', label: t('admin.audit.columns.action') },
+  { key: 'path', label: t('admin.audit.detail.methodPath') },
+  { key: 'client_ip', label: t('admin.audit.columns.clientIp') },
   { key: 'status_code', label: t('admin.audit.columns.result') },
   { key: 'latency_ms', label: t('admin.audit.detail.latency') },
-  { key: 'client_ip', label: t('admin.audit.columns.clientIp') },
+  { key: 'request_id', label: t('admin.audit.detail.requestId') },
   { key: 'actions', label: t('common.actions') }
 ])
 

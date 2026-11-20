@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-dark-950">
+  <div class="min-h-screen" :class="isAdminRoute ? 'gateway-admin' : 'bg-gray-50 dark:bg-dark-950'">
     <!-- Background Decoration -->
     <div class="pointer-events-none fixed inset-0 bg-mesh-gradient"></div>
 
@@ -8,8 +8,8 @@
 
     <!-- Main Content Area -->
     <div
-      class="relative min-h-screen transition-all duration-300"
-      :class="[sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64']"
+      class="gateway-layout-content relative min-h-screen transition-all duration-300"
+      :class="isAdminRoute ? { 'gateway-layout-collapsed': sidebarCollapsed } : (sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64')"
     >
       <!-- Header -->
       <AppHeader />
@@ -25,6 +25,7 @@
 <script setup lang="ts">
 import '@/styles/onboarding.css'
 import { computed, onMounted } from 'vue'
+import { useGatewayAdminLayout } from '@/composables/useGatewayAdminLayout'
 import { useAppStore } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingTour } from '@/composables/useOnboardingTour'
@@ -34,6 +35,7 @@ import AppHeader from './AppHeader.vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const isAdminRoute = useGatewayAdminLayout()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 

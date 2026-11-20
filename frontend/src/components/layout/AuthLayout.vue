@@ -1,5 +1,36 @@
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+  <div v-if="split" class="gateway-auth">
+    <aside class="gateway-auth-hero" aria-labelledby="gateway-auth-title">
+      <div class="gateway-auth-brand">
+        <span class="gateway-brand-mark"><img v-if="siteLogo" :src="siteLogo" alt="" /><Icon v-else name="bolt" size="md" /></span>
+        {{ siteName }}
+      </div>
+      <div>
+        <h1 id="gateway-auth-title">{{ t('gatewayUi.heroLine1') }}<br />{{ t('gatewayUi.heroLine2') }}</h1>
+        <p class="gateway-auth-description">{{ t('gatewayUi.heroDesc') }}</p>
+        <div class="gateway-auth-features">
+          <div v-for="feature in features" :key="feature.key">
+            <Icon :name="feature.icon" size="sm" aria-hidden="true" />
+            <div><strong>{{ t(`gatewayUi.${feature.key}`) }}</strong><small>{{ t(`gatewayUi.${feature.key}Desc`) }}</small></div>
+          </div>
+        </div>
+      </div>
+      <p class="gateway-auth-foot">{{ siteName }} · {{ t('gatewayUi.heroFoot') }}</p>
+    </aside>
+    <main class="gateway-auth-panel">
+      <div class="gateway-auth-tools"><LocaleSwitcher />
+        <button type="button" class="gw-icon-button" :aria-label="t(isDark ? 'nav.lightMode' : 'nav.darkMode')" @click="toggleTheme">
+          <Icon :name="isDark ? 'sun' : 'moon'" size="md" />
+        </button>
+      </div>
+      <div class="gateway-auth-card">
+        <div class="gateway-auth-brand gateway-auth-mobile-brand"><span class="gateway-brand-mark"><img v-if="siteLogo" :src="siteLogo" alt="" /><Icon v-else name="bolt" size="md" /></span>{{ siteName }}</div>
+        <slot />
+        <div v-if="$slots.footer" class="mt-6 text-center text-sm"><slot name="footer" /></div>
+      </div>
+    </main>
+  </div>
+  <div v-else class="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
     <!-- Background -->
     <div
       class="absolute inset-0 bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
@@ -64,6 +95,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import Icon from '@/components/icons/Icon.vue'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import { useGatewayTheme } from '@/composables/useGatewayTheme'
+
+defineProps<{ split?: boolean }>()
+const { t } = useI18n()
+const { isDark, toggleTheme } = useGatewayTheme()
+const features = [
+  { key: 'pool', icon: 'users' }, { key: 'keys', icon: 'key' },
+  { key: 'billing', icon: 'chart' }, { key: 'scheduler', icon: 'clock' }
+] as const
 import { useAppStore } from '@/stores'
 import { sanitizeUrl } from '@/utils/url'
 

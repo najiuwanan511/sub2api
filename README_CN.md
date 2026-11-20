@@ -271,7 +271,7 @@ fast_mode = true
 本仓库基于 [Wei-Shaw/Sub2API](https://github.com/Wei-Shaw/sub2api)。本仓库的正式版本由 GitHub Actions 在推送 `vX.Y.Z` 标签后发布，提供二进制包、`checksums.txt` 和 `ghcr.io/najiuwanan511/sub2api` 镜像。不要混用官方镜像和本仓库发行包。
 
 - **Linux 二进制安装**：用下方脚本安装，后台版本菜单可从本仓库 Releases 检查和安装后续版本。
-- **Docker Compose**：在安装目录执行 `docker compose pull && docker compose up -d`。不要在容器里用二进制替换来升级，容器重建时会丢失该改动。
+- **Docker Compose**：在安装目录执行 `docker compose pull && docker compose up -d`。如果 GHCR 镜像仍为私有，先以具有 `read:packages` 权限的凭据登录 `ghcr.io`。不要在容器内替换二进制，容器重建时会丢失该改动。
 - **接入上级**：在「账号管理 → 接入上级 Sub2API」填入上级站点和 OpenAI 分组签发的 API Key，选本地对应分组。可同步模型，保存后进入连通测试。
 
 ## 部署方式

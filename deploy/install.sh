@@ -40,6 +40,9 @@ CONFIG_DIR="/etc/sub2api"
 # Server configuration (will be set by user)
 SERVER_HOST="0.0.0.0"
 SERVER_PORT="8080"
+HTTPS_DOMAIN=""
+HTTPS_CONFIG="/etc/caddy/sub2api.Caddyfile"
+HTTPS_OVERRIDE="/etc/systemd/system/caddy.service.d/90-sub2api.conf"
 
 # Language (default: zh = Chinese)
 LANG_CHOICE="zh"
@@ -328,8 +331,8 @@ print_error() {
 # Check if running interactively (can access terminal)
 # When piped (curl | bash), stdin is not a terminal, but /dev/tty may still be available
 is_interactive() {
-    # Check if /dev/tty is available (works even when piped)
-    [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]
+    # /dev/tty may exist even without a controlling terminal (e.g. SSH without -t).
+    ( : </dev/tty ) 2>/dev/null
 }
 
 # Select language
@@ -370,6 +373,115 @@ validate_port() {
         return 0
     fi
     return 1
+}
+
+# HTTPS setup is opt-in and managed separately from the Go service.
+valid_https_domain() {
+    local domain="$1" label
+    local -a labels
+    local LC_ALL=C
+    [[ ${#domain} -le 253 && "$domain" =~ ^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+$ ]] || return 1
+    IFS=. read -r -a labels <<< "$domain"
+    [[ "${labels[${#labels[@]}-1]}" =~ [a-zA-Z] ]] || return 1
+    for label in "${labels[@]}"; do
+        [[ ${#label} -le 63 && "$label" != -* && "$label" != *- ]] || return 1
+    done
+}
+
+check_https_install() {
+    local listeners sub2api_unit caddy_unit
+    if [ "$OS" != linux ] || ! command -v apt-get >/dev/null || ! command -v systemctl >/dev/null || ! command -v ss >/dev/null; then
+        print_error "Automatic HTTPS requires a Linux system with APT, systemd and ss (e.g. Ubuntu or Debian)."
+        return 1
+    fi
+    if ! sub2api_unit=$(systemctl show sub2api.service --property=LoadState --value); then
+        print_error "Unable to inspect systemd services; nothing was installed."
+        return 1
+    fi
+    if [ -e "$INSTALL_DIR/sub2api" ] || [ -L "$INSTALL_DIR/sub2api" ] || [ "$sub2api_unit" != not-found ]; then
+        print_error "An existing Sub2API installation was found. Automatic HTTPS is for a fresh install; it will not replace your setup."
+        return 1
+    fi
+    if [ -e "$HTTPS_CONFIG" ] || [ -L "$HTTPS_CONFIG" ] || [ -e "$HTTPS_OVERRIDE" ] || [ -L "$HTTPS_OVERRIDE" ]; then
+        print_error "Sub2API HTTPS configuration already exists; refusing to overwrite it."
+        return 1
+    fi
+    if ! caddy_unit=$(systemctl show caddy.service --property=LoadState --property=DropInPaths --property=FragmentPath); then
+        print_error "Unable to inspect the Caddy service; nothing was installed."
+        return 1
+    fi
+    if ! grep -Fxq 'LoadState=not-found' <<< "$caddy_unit" ||
+       grep -Eq '^(DropInPaths|FragmentPath)=.+' <<< "$caddy_unit" || command -v caddy >/dev/null; then
+        print_error "An existing Caddy service was found. Use your current reverse proxy instead."
+        return 1
+    fi
+    listeners=$(ss -H -ltn '( sport = :80 or sport = :443 or sport = :8080 )') || return 1
+    if [ -n "$listeners" ]; then
+        print_error "TCP 80, 443 or 8080 is already in use; nothing was installed."
+        printf '%s\n' "$listeners"
+        return 1
+    fi
+}
+
+write_https_caddyfile() {
+    cat <<EOF
+# Managed by the Sub2API installer.
+$HTTPS_DOMAIN {
+    # Unauthenticated first-time setup is only accessible via a local SSH tunnel.
+    @setup {
+        path /setup /setup/*
+        not path /setup/status
+    }
+    respond @setup 403
+
+    reverse_proxy 127.0.0.1:$SERVER_PORT {
+        header_up -CF-Connecting-IP
+        header_up X-Real-IP {remote_host}
+    }
+}
+EOF
+}
+
+install_https_proxy() {
+    local config
+    apt-get update
+    apt-get install -y caddy
+    # The APT package may have started its stock HTTP site. Replace only its
+    # service arguments with an installer-owned drop-in, not /etc/caddy/Caddyfile.
+    systemctl stop caddy.service
+    config=$(mktemp --tmpdir="$(dirname "$HTTPS_CONFIG")" .sub2api-caddy.XXXXXX)
+    write_https_caddyfile > "$config"
+    if ! /usr/bin/caddy validate --config "$config" --adapter caddyfile; then
+        rm -f -- "$config"
+        return 1
+    fi
+    chmod 644 "$config"
+    mv -- "$config" "$HTTPS_CONFIG"
+    mkdir -p -- "$(dirname "$HTTPS_OVERRIDE")"
+    cat > "$HTTPS_OVERRIDE" <<EOF
+# Managed by the Sub2API installer.
+[Service]
+ExecStart=
+ExecStart=/usr/bin/caddy run --environ --config $HTTPS_CONFIG --adapter caddyfile
+ExecReload=
+ExecReload=/usr/bin/caddy reload --config $HTTPS_CONFIG --adapter caddyfile --force
+EOF
+    systemctl daemon-reload
+    if ! systemctl enable --now caddy.service; then
+        print_error "Caddy did not start. Check: journalctl -u caddy -n 50 --no-pager"
+        return 1
+    fi
+}
+
+remove_https_proxy() {
+    local marker='# Managed by the Sub2API installer.'
+    if [ -f "$HTTPS_OVERRIDE" ] && grep -Fxq "$marker" "$HTTPS_OVERRIDE"; then
+        systemctl disable --now caddy.service
+        rm -f -- "$HTTPS_OVERRIDE"
+        if [ -f "$HTTPS_CONFIG" ] && grep -Fxq "$marker" "$HTTPS_CONFIG"; then
+            rm -f -- "$HTTPS_CONFIG"
+        fi
+    fi
 }
 
 # Configure server settings
@@ -833,7 +945,14 @@ print_completion() {
     echo "  $(msg 'step4_open_wizard')"
     echo "=============================================="
     echo ""
-    print_info "     http://${display_host}:${SERVER_PORT}"
+    if [ -n "$HTTPS_DOMAIN" ]; then
+        print_info "     https://$HTTPS_DOMAIN"
+        print_info "     首次配置请先在自己的电脑运行 SSH 隧道，再用浏览器打开 http://127.0.0.1:18080/setup："
+        echo "     ssh -N -L 127.0.0.1:18080:127.0.0.1:$SERVER_PORT root@你的服务器IP"
+        print_info "     证书申请失败时查看：journalctl -u caddy -n 50 --no-pager"
+    else
+        print_info "     http://${display_host}:${SERVER_PORT}"
+    fi
     echo ""
     echo "     $(msg 'wizard_guide')"
     echo "     - $(msg 'wizard_db')"
@@ -992,6 +1111,7 @@ uninstall() {
 
     print_info "$(msg 'removing_files')"
     rm -f /etc/systemd/system/sub2api.service
+    remove_https_proxy
     systemctl daemon-reload
 
     print_info "$(msg 'removing_install_dir')"
@@ -1029,6 +1149,37 @@ uninstall() {
     print_success "$(msg 'uninstall_complete')"
 }
 
+# Fresh binary installation (the optional Caddy proxy does not use Docker).
+fresh_install() {
+    local target_version="$1"
+    if [ -n "$HTTPS_DOMAIN" ]; then
+        check_https_install
+        SERVER_HOST="127.0.0.1"
+        print_info "HTTPS: https://$HTTPS_DOMAIN -> http://127.0.0.1:$SERVER_PORT"
+    else
+        configure_server
+    fi
+    if [ -n "$target_version" ]; then
+        LATEST_VERSION=$(validate_version "$target_version")
+    else
+        get_latest_version
+    fi
+    download_and_extract
+    create_user
+    setup_directories
+    install_service
+    prepare_for_setup
+    if [ -z "$HTTPS_DOMAIN" ]; then
+        get_public_ip || true
+    fi
+    start_service
+    enable_autostart
+    if [ -n "$HTTPS_DOMAIN" ]; then
+        install_https_proxy
+    fi
+    print_completion
+}
+
 # Main
 main() {
     # Parse flags first
@@ -1054,6 +1205,14 @@ main() {
                     exit 1
                 fi
                 ;;
+            --domain)
+                if [ "$#" -lt 2 ] || ! valid_https_domain "$2"; then
+                    echo "Error: --domain requires a DNS name such as api.example.com (no URL or port)." >&2
+                    exit 1
+                fi
+                HTTPS_DOMAIN="$2"
+                shift 2
+                ;;
             --version=*)
                 target_version="${1#*=}"
                 if [ -z "$target_version" ]; then
@@ -1071,6 +1230,10 @@ main() {
 
     # Restore positional arguments
     set -- "${positional_args[@]}"
+    if [ -n "$HTTPS_DOMAIN" ] && [[ "${1:-}" != install && -n "${1:-}" ]]; then
+        echo "Error: --domain is available only for a fresh install." >&2
+        exit 1
+    fi
 
     # Select language first
     select_language
@@ -1096,43 +1259,14 @@ main() {
             fi
             exit 0
             ;;
-        install)
-            # Install with optional version
+        install|'')
             check_root
             detect_platform
             check_dependencies
-            if [ -n "$target_version" ]; then
-                # Install specific version (fresh install or rollback)
-                if [ -f "$INSTALL_DIR/sub2api" ]; then
-                    # Already installed, treat as version change
-                    install_version "$target_version"
-                else
-                    # Fresh install with specific version
-                    configure_server
-                    LATEST_VERSION=$(validate_version "$target_version")
-                    download_and_extract
-                    create_user
-                    setup_directories
-                    install_service
-                    prepare_for_setup
-                    get_public_ip
-                    start_service
-                    enable_autostart
-                    print_completion
-                fi
+            if [ -z "$HTTPS_DOMAIN" ] && [ -n "$target_version" ] && [ -f "$INSTALL_DIR/sub2api" ]; then
+                install_version "$target_version"
             else
-                # Fresh install with latest version
-                configure_server
-                get_latest_version
-                download_and_extract
-                create_user
-                setup_directories
-                install_service
-                prepare_for_setup
-                get_public_ip
-                start_service
-                enable_autostart
-                print_completion
+                fresh_install "$target_version"
             fi
             exit 0
             ;;
@@ -1178,6 +1312,7 @@ main() {
             echo ""
             echo "Options:"
             echo "  -v, --version <ver>  $(msg 'opt_version')"
+            echo "  --domain <name>      Enable HTTPS on 443 for a fresh Linux install (Caddy via APT)"
             echo "  -y, --yes            Skip confirmation prompts (for uninstall)"
             echo ""
             echo "Examples:"
@@ -1190,44 +1325,11 @@ main() {
             echo ""
             exit 0
             ;;
+        *)
+            echo "Unknown command: $1 (see --help)" >&2
+            exit 1
+            ;;
     esac
-
-    # Default: Fresh install with latest version
-    check_root
-    detect_platform
-    check_dependencies
-
-    if [ -n "$target_version" ]; then
-        # Install specific version
-        if [ -f "$INSTALL_DIR/sub2api" ]; then
-            install_version "$target_version"
-        else
-            configure_server
-            LATEST_VERSION=$(validate_version "$target_version")
-            download_and_extract
-            create_user
-            setup_directories
-            install_service
-            prepare_for_setup
-            get_public_ip
-            start_service
-            enable_autostart
-            print_completion
-        fi
-    else
-        # Install latest version
-        configure_server
-        get_latest_version
-        download_and_extract
-        create_user
-        setup_directories
-        install_service
-        prepare_for_setup
-        get_public_ip
-        start_service
-        enable_autostart
-        print_completion
-    fi
 }
 
 main "$@"

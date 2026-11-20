@@ -18,6 +18,60 @@ English | [中文](README_CN.md) | [日本語](README_JA.md)
 
 </div>
 
+## Quick install, update, and uninstall
+
+### Linux binary (systemd)
+
+Requires Linux (amd64 or arm64) with systemd, `curl`, sudo/root access, and running PostgreSQL 15+ and Redis 7+. If you are already root and `sudo` is not installed, omit `sudo`. Install and update use the latest stable version from [this fork’s GitHub Releases](https://github.com/najiuwanan511/sub2api/releases).
+
+**Install on a new server**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
+```
+
+**Update an existing binary installation**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- upgrade
+```
+
+**Uninstall from an interactive terminal**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall
+```
+
+Uninstall asks for confirmation and **deletes `/opt/sub2api`, including `/opt/sub2api/data`**. It removes `/etc/sub2api/.installed` and separately asks whether to delete the rest of `/etc/sub2api`. It does not delete the PostgreSQL database or uninstall Redis. Back up your data and configuration first.
+
+### Docker Compose
+
+Use these commands instead of the binary installer for Docker deployments. Installation requires Docker, Compose v2, `curl`, and OpenSSL. The generated Compose file uses `ghcr.io/najiuwanan511/sub2api:latest`. Run the install command in a parent directory where `sub2api-deploy` does not already exist.
+
+**Install and start**
+
+```bash
+mkdir sub2api-deploy && cd sub2api-deploy &&
+  curl -fsSLo docker-deploy.sh https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh &&
+  bash docker-deploy.sh && docker compose up -d
+```
+
+**Update Sub2API (run from the deployment directory)**
+
+```bash
+docker compose pull sub2api && docker compose up -d --no-deps sub2api
+```
+
+**Stop and remove containers (run from the deployment directory)**
+
+```bash
+docker compose down
+```
+
+`docker compose down` keeps named volumes, bind-mounted data, and `.env`. If you started the stack with a custom Compose filename, pass the same `-f` option when updating or removing it.
+
+See [deployment details](#deployment) for first-time setup and manual deployment.
+
 ## ⚠️ Important Notice
 
 Please read the following carefully before using this project:
@@ -255,9 +309,7 @@ One-click installation script that downloads pre-built binaries from GitHub Rele
 
 #### Installation Steps
 
-```bash
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
-```
+Run the [Linux binary installation command](#linux-binary-systemd) above.
 
 The script will:
 1. Detect your system architecture
@@ -286,12 +338,7 @@ The Setup Wizard will guide you through:
 
 #### Upgrade
 
-You can upgrade directly from the **Admin Dashboard** by clicking the **Check for Updates** button in the top-left corner.
-
-The web interface will:
-- Check for new versions automatically
-- Download and apply updates with one click
-- Support rollback if needed
+Run the [Linux binary update command](#linux-binary-systemd) above, or select **Check for Updates** in the admin dashboard. The CLI update replaces the binary and restarts the service.
 
 #### Useful Commands
 
@@ -304,9 +351,6 @@ sudo journalctl -u sub2api -f
 
 # Restart service
 sudo systemctl restart sub2api
-
-# Uninstall
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
 ```
 
 ---
@@ -322,21 +366,7 @@ Deploy with Docker Compose, including PostgreSQL and Redis containers.
 
 #### Quick Start (One-Click Deployment)
 
-Use the automated deployment script for easy setup:
-
-```bash
-# Create deployment directory
-mkdir -p sub2api-deploy && cd sub2api-deploy
-
-# Download and run deployment preparation script
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh | bash
-
-# Start services
-docker compose up -d
-
-# View logs
-docker compose logs -f sub2api
-```
+Run the [one-click Docker Compose command](#docker-compose) above. After startup, run `docker compose logs -f sub2api` in the deployment directory to view the application logs.
 
 **What the script does:**
 - Downloads `docker-compose.local.yml` (saved as `docker-compose.yml`) and `.env.example`
@@ -436,8 +466,8 @@ docker compose -f docker-compose.local.yml logs sub2api | grep "Generated admin"
 
 ```bash
 # Pull latest image and recreate container
-docker compose -f docker-compose.local.yml pull
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml pull sub2api
+docker compose -f docker-compose.local.yml up -d --no-deps sub2api
 ```
 
 #### Easy Migration (Local Directory Version)

@@ -18,6 +18,60 @@
 
 </div>
 
+## インストール・更新・アンインストール
+
+### Linux バイナリ（systemd）
+
+systemd を使用する Linux（amd64 または arm64）が対象です。`curl`、sudo または root 権限、稼働中の PostgreSQL 15+ と Redis 7+ が必要です。root でログインしていて `sudo` がない場合は、コマンドから `sudo` を外してください。インストールと更新には[このフォークの GitHub Releases](https://github.com/najiuwanan511/sub2api/releases)の最新安定版が使われます。
+
+**インストール（新規サーバー）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
+```
+
+**更新（バイナリ版をインストール済みの場合）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- upgrade
+```
+
+**アンインストール（対話型端末で実行）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall
+```
+
+確認に応じると、**`/opt/sub2api`（`/opt/sub2api/data` を含む）が削除されます**。`/etc/sub2api/.installed` も削除され、残りの `/etc/sub2api` の設定を削除するかは別途確認されます。PostgreSQL データベースの削除や Redis のアンインストールは行いません。事前にデータと設定をバックアップしてください。
+
+### Docker Compose
+
+Docker ではバイナリ版のスクリプトではなく、こちらのコマンドを使ってください。初回は Docker、Compose v2、`curl`、OpenSSL が必要です。生成される Compose ファイルは `ghcr.io/najiuwanan511/sub2api:latest` を使用します。`sub2api-deploy` が存在しない親ディレクトリで実行してください。
+
+**インストールと起動**
+
+```bash
+mkdir sub2api-deploy && cd sub2api-deploy &&
+  curl -fsSLo docker-deploy.sh https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh &&
+  bash docker-deploy.sh && docker compose up -d
+```
+
+**Sub2API を更新（デプロイ先のディレクトリで実行）**
+
+```bash
+docker compose pull sub2api && docker compose up -d --no-deps sub2api
+```
+
+**コンテナを停止・削除（デプロイ先のディレクトリで実行）**
+
+```bash
+docker compose down
+```
+
+`docker compose down` は名前付きボリューム、バインドマウントのデータ、`.env` を保持します。起動時に `-f` で Compose ファイルを指定した場合は、更新時や削除時にも同じ `-f` オプションを使ってください。
+
+初期設定と手動デプロイは[デプロイ手順](#デプロイ)を参照してください。
+
 ## ⚠️ 重要なお知らせ
 
 本プロジェクトをご利用になる前に、以下の内容を必ずよくお読みください：
@@ -251,9 +305,7 @@ GitHub Releases からビルド済みバイナリをダウンロードするワ�
 
 #### インストール手順
 
-```bash
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
-```
+上の [Linux バイナリのインストールコマンド](#linux-バイナリsystemd)を実行してください。
 
 スクリプトは以下を実行します:
 1. システムアーキテクチャの検出
@@ -282,12 +334,7 @@ sudo systemctl enable sub2api
 
 #### アップグレード
 
-**管理ダッシュボード**の左上にある**アップデートを確認**ボタンをクリックすることで、ダッシュボードから直接アップグレードできます。
-
-Web インターフェースでは以下が可能です:
-- 新しいバージョンの自動確認
-- ワンクリックでのアップデートのダウンロードと適用
-- 必要に応じたロールバック
+上の [Linux バイナリの更新コマンド](#linux-バイナリsystemd)を実行するか、管理ダッシュボードの**アップデートを確認**を選択してください。コマンドで更新するとバイナリが置き換わり、サービスが再起動します。
 
 #### よく使うコマンド
 
@@ -300,9 +347,6 @@ sudo journalctl -u sub2api -f
 
 # サービスを再起動
 sudo systemctl restart sub2api
-
-# アンインストール
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
 ```
 
 ---
@@ -318,21 +362,7 @@ PostgreSQL と Redis のコンテナを含む Docker Compose でデプロイし�
 
 #### クイックスタート（ワンクリックデプロイ）
 
-自動デプロイスクリプトを使用して簡単にセットアップできます:
-
-```bash
-# デプロイ用ディレクトリを作成
-mkdir -p sub2api-deploy && cd sub2api-deploy
-
-# デプロイ準備スクリプトをダウンロードして実行
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh | bash
-
-# サービスを起動
-docker compose up -d
-
-# ログを表示
-docker compose logs -f sub2api
-```
+上の [Docker Compose のインストールコマンド](#docker-compose)を実行してください。起動後、デプロイ先で `docker compose logs -f sub2api` を実行するとアプリケーションログを確認できます。
 
 **スクリプトの動作内容:**
 - `docker-compose.local.yml`（`docker-compose.yml` として保存）と `.env.example` をダウンロード
@@ -432,8 +462,8 @@ docker compose -f docker-compose.local.yml logs sub2api | grep "Generated admin"
 
 ```bash
 # 最新イメージをプルしてコンテナを再作成
-docker compose -f docker-compose.local.yml pull
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml pull sub2api
+docker compose -f docker-compose.local.yml up -d --no-deps sub2api
 ```
 
 #### 簡単な移行（ローカルディレクトリバージョン）

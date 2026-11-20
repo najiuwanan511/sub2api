@@ -19,6 +19,60 @@
 </div>
 
 
+## 一键安装、更新与卸载
+
+### Linux 二进制安装（systemd）
+
+适用于使用 systemd 的 Linux（amd64 / arm64）。需要 `curl`、sudo 或 root 权限，以及已运行的 PostgreSQL 15+ 和 Redis 7+。如果已用 root 登录且未安装 `sudo`，去掉命令中的 `sudo`。安装和更新均从[本仓库的 GitHub Releases](https://github.com/najiuwanan511/sub2api/releases)获取最新正式版。
+
+**一键安装（新服务器）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
+```
+
+**一键更新（已通过二进制脚本安装）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- upgrade
+```
+
+**一键卸载（在交互式终端执行）**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall
+```
+
+卸载会先要求确认，然后**删除 `/opt/sub2api`，包括 `/opt/sub2api/data`**。脚本还会移除 `/etc/sub2api/.installed`，并另行询问是否删除其余 `/etc/sub2api` 配置。脚本不会删除 PostgreSQL 数据库或卸载 Redis。请先备份数据和配置。
+
+### Docker Compose 部署
+
+Docker 部署请使用本节命令，不要运行上面的二进制脚本。首次部署需要 Docker、Compose v2、`curl` 和 OpenSSL。生成的 Compose 文件使用 `ghcr.io/najiuwanan511/sub2api:latest` 镜像。请在尚不存在 `sub2api-deploy` 目录的位置运行安装命令。
+
+**一键安装并启动**
+
+```bash
+mkdir sub2api-deploy && cd sub2api-deploy &&
+  curl -fsSLo docker-deploy.sh https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh &&
+  bash docker-deploy.sh && docker compose up -d
+```
+
+**更新 Sub2API（在部署目录执行）**
+
+```bash
+docker compose pull sub2api && docker compose up -d --no-deps sub2api
+```
+
+**停止并移除容器（在部署目录执行）**
+
+```bash
+docker compose down
+```
+
+`docker compose down` 保留命名卷、挂载的数据目录和 `.env`。如果启动时用 `-f` 指定过 Compose 文件，更新或移除时也要使用相同的 `-f` 参数。
+
+首次配置和手动部署请查看[部署方式](#部署方式)。
+
 ## ⚠️ 重要提醒
 
 使用本项目前，请务必仔细阅读以下内容：
@@ -271,7 +325,7 @@ fast_mode = true
 本仓库基于 [Wei-Shaw/Sub2API](https://github.com/Wei-Shaw/sub2api)。本仓库的正式版本由 GitHub Actions 在推送 `vX.Y.Z` 标签后发布，提供二进制包、`checksums.txt` 和 `ghcr.io/najiuwanan511/sub2api` 镜像。不要混用官方镜像和本仓库发行包。
 
 - **Linux 二进制安装**：用下方脚本安装，后台版本菜单可从本仓库 Releases 检查和安装后续版本。
-- **Docker Compose**：在安装目录执行 `docker compose pull && docker compose up -d`。如果 GHCR 镜像仍为私有，先以具有 `read:packages` 权限的凭据登录 `ghcr.io`。不要在容器内替换二进制，容器重建时会丢失该改动。
+- **Docker Compose**：按[首页快捷命令](#docker-compose-部署)更新本仓库镜像 `ghcr.io/najiuwanan511/sub2api:latest`。不要在容器内替换二进制。
 - **接入上级**：在「账号管理 → 接入上级 Sub2API」填入上级站点和 OpenAI 分组签发的 API Key，选本地对应分组。可同步模型，保存后进入连通测试。
 
 ## 部署方式
@@ -289,9 +343,7 @@ fast_mode = true
 
 #### 安装步骤
 
-```bash
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
-```
+执行上方的 [Linux 二进制安装命令](#linux-二进制安装systemd)。
 
 脚本会自动：
 1. 检测系统架构
@@ -320,12 +372,7 @@ sudo systemctl enable sub2api
 
 #### 升级
 
-可以直接在 **管理后台** 左上角点击 **检测更新** 按钮进行在线升级。
-
-网页升级功能支持：
-- 自动检测新版本
-- 一键下载并应用更新
-- 支持回滚
+执行上方的 [Linux 二进制更新命令](#linux-二进制安装systemd)，或在管理后台点击**检测更新**。命令行更新会替换二进制并重启服务。
 
 #### 常用命令
 
@@ -338,9 +385,6 @@ sudo journalctl -u sub2api -f
 
 # 重启服务
 sudo systemctl restart sub2api
-
-# 卸载
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
 ```
 
 ---
@@ -356,21 +400,7 @@ curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/in
 
 #### 快速开始（一键部署）
 
-使用自动化部署脚本快速搭建：
-
-```bash
-# 创建部署目录
-mkdir -p sub2api-deploy && cd sub2api-deploy
-
-# 下载并运行部署准备脚本
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh | bash
-
-# 启动服务
-docker compose up -d
-
-# 查看日志
-docker compose logs -f sub2api
-```
+执行上方的 [Docker Compose 一键安装命令](#docker-compose-部署)。启动后，在部署目录执行 `docker compose logs -f sub2api` 查看应用日志。
 
 **脚本功能：**
 - 下载 `docker-compose.local.yml`（本地保存为 `docker-compose.yml`）和 `.env.example`
@@ -482,8 +512,8 @@ docker compose -f docker-compose.local.yml logs sub2api | grep "Generated admin"
 
 ```bash
 # 拉取最新镜像并重建容器
-docker compose -f docker-compose.local.yml pull
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml pull sub2api
+docker compose -f docker-compose.local.yml up -d --no-deps sub2api
 ```
 
 #### 轻松迁移（本地目录版）

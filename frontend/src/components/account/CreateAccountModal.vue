@@ -1,7 +1,7 @@
 <template>
   <BaseDialog
     :show="show"
-    :title="t('admin.accounts.createAccount')"
+    :title="t(sub2apiPreset ? 'gatewayUi.connectSub2API' : 'admin.accounts.createAccount')"
     width="wide"
     @close="handleClose"
   >
@@ -45,6 +45,9 @@
       @submit.prevent="handleSubmit"
       class="space-y-5"
     >
+      <p v-if="sub2apiPreset" class="rounded-lg bg-primary-50 p-3 text-sm text-primary-800 dark:bg-primary-900/30 dark:text-primary-200">
+        {{ t('gatewayUi.sub2apiSetupHint') }}
+      </p>
       <div>
         <label class="input-label">{{ t('admin.accounts.accountName') }}</label>
         <input
@@ -68,7 +71,7 @@
       </div>
 
       <!-- Platform Selection - Segmented Control Style -->
-      <div>
+      <div v-if="!sub2apiPreset">
         <label class="input-label">{{ t('admin.accounts.platform') }}</label>
         <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700" data-tour="account-form-platform">
           <button
@@ -397,7 +400,7 @@
       </div>
 
       <!-- Account Type Selection (OpenAI) -->
-      <div v-if="form.platform === 'openai'">
+      <div v-if="form.platform === 'openai' && !sub2apiPreset">
         <label class="input-label">{{ t('admin.accounts.accountType') }}</label>
         <div class="mt-2 grid grid-cols-2 gap-3" data-tour="account-form-type">
           <button
@@ -1507,9 +1510,17 @@
             v-model="apiKeyBaseUrl"
             type="text"
             class="input"
-            :placeholder="apiKeyBaseUrlPlaceholder"
+            :placeholder="sub2apiPreset ? 'https://gateway.example.com/v1' : apiKeyBaseUrlPlaceholder"
+            :required="sub2apiPreset"
+            :aria-invalid="sub2apiPreset && !!apiKeyBaseUrl && !normalizedSub2APIBaseUrl ? true : undefined"
+            :aria-describedby="sub2apiPreset ? 'sub2api-base-url-hint' : undefined"
+            data-testid="account-api-key-base-url"
+            @blur="normalizeSub2APIField"
           />
-          <p v-if="baseUrlHint" class="input-hint">{{ baseUrlHint }}</p>
+          <p v-if="sub2apiPreset" id="sub2api-base-url-hint" class="input-hint">
+            {{ t(apiKeyBaseUrl && !normalizedSub2APIBaseUrl ? 'gatewayUi.sub2apiInvalidUrl' : 'gatewayUi.sub2apiUrlHint') }}
+          </p>
+          <p v-else-if="baseUrlHint" class="input-hint">{{ baseUrlHint }}</p>
           <GrokBaseUrlPresets
             v-if="form.platform === 'grok'"
             class="mt-2"
@@ -3859,7 +3870,7 @@
               ? t('common.next')
               : submitting
                 ? t('admin.accounts.creating')
-                : t('common.create')
+                : t(sub2apiPreset ? 'gatewayUi.sub2apiSaveAndTest' : 'common.create')
           }}
         </button>
       </div>
@@ -4136,6 +4147,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
+import { normalizeSub2APIUpstreamUrl } from '@/utils/sub2apiUpstream'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 
@@ -4345,12 +4357,14 @@ interface Props {
   show: boolean
   proxies: Proxy[]
   groups: AdminGroup[]
+  sub2apiPreset?: boolean
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   created: []
+  testCreated: [accountId: number]
 }>()
 
 const appStore = useAppStore()
@@ -4423,6 +4437,12 @@ const submitting = ref(false)
 const accountCategory = ref<'oauth-based' | 'apikey' | 'bedrock' | 'service_account'>('oauth-based') // UI selection for account category
 const addMethod = ref<AddMethod>('oauth') // For oauth-based: 'oauth' or 'setup-token'
 const apiKeyBaseUrl = ref('https://api.anthropic.com')
+const normalizedSub2APIBaseUrl = computed(() => normalizeSub2APIUpstreamUrl(apiKeyBaseUrl.value))
+const normalizeSub2APIField = () => {
+  if (props.sub2apiPreset && normalizedSub2APIBaseUrl.value) {
+    apiKeyBaseUrl.value = normalizedSub2APIBaseUrl.value
+  }
+}
 const apiKeyValue = ref('')
 const upstreamBillingAutoProbeEnabled = ref(true)
 
@@ -4629,8 +4649,8 @@ function onCnPresetSelect(preset: { mode: CnAccountMode; protocol: CnApiProtocol
 }
 
 const syncPreviewCredentials = computed(() => {
-  if (!apiKeyValue.value) return undefined
-  const baseUrl = isMultiProtocolPlatform.value && apiProtocol.value === 'adaptive'
+  if (!apiKeyValue.value || (props.sub2apiPreset && !normalizedSub2APIBaseUrl.value)) return undefined
+  const baseUrl = props.sub2apiPreset ? normalizedSub2APIBaseUrl.value : isMultiProtocolPlatform.value && apiProtocol.value === 'adaptive'
     ? adaptiveBaseUrls.value.chat_completions.trim() || apiKeyBaseUrl.value.trim()
     : apiKeyBaseUrl.value.trim()
   const modelMapping = buildModelMappingObject(
@@ -5113,12 +5133,19 @@ watch(
   () => props.show,
   (newVal) => {
     if (newVal) {
+      if (props.sub2apiPreset) {
+        form.platform = 'openai'
+        accountCategory.value = 'apikey'
+        form.type = 'apikey'
+        apiKeyBaseUrl.value = ''
+        upstreamBillingAutoProbeEnabled.value = false
+      }
       // Load TLS fingerprint profiles
       adminAPI.tlsFingerprintProfiles.list()
         .then(profiles => { tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name })) })
         .catch(() => { tlsFingerprintProfiles.value = [] })
-      // Modal opened - fill related models
-      allowedModels.value = [...getModelsByPlatform(form.platform)]
+      // The gateway preset starts without a whitelist; the upstream decides what the key can use.
+      allowedModels.value = props.sub2apiPreset ? [] : [...getModelsByPlatform(form.platform)]
       // Antigravity: 默认使用映射模式并填充默认映射
       if (form.platform === 'antigravity') {
         antigravityModelRestrictionMode.value = 'mapping'
@@ -5166,8 +5193,10 @@ watch(
 watch(
   () => form.platform,
   (newPlatform) => {
-    // Reset base URL based on platform
-    if (isMultiProtocolApiKeyPlatform(newPlatform)) {
+    // A preset must never silently substitute an official provider URL.
+    if (props.show && props.sub2apiPreset) {
+      apiKeyBaseUrl.value = ''
+    } else if (isMultiProtocolApiKeyPlatform(newPlatform)) {
       const mode = newPlatform === 'opencode_go' ? openCodeAccountMode.value : accountMode.value
       apiKeyBaseUrl.value = defaultCNBaseUrl(newPlatform, mode, apiProtocol.value)
     } else {
@@ -5623,6 +5652,7 @@ const submitCreateAccount = async (payload: CreateAccountRequest) => {
     appStore.showSuccess(t('admin.accounts.accountCreated'))
     emit('created')
     handleClose()
+    if (props.sub2apiPreset) emit('testCreated', account.id)
   } catch (error: any) {
     if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning' && needsMixedChannelCheck(form.platform)) {
       openMixedChannelDialog({
@@ -6147,6 +6177,12 @@ const handleSubmit = async () => {
     return
   }
 
+  const sub2apiBaseUrl = props.sub2apiPreset ? normalizedSub2APIBaseUrl.value : null
+  if (props.sub2apiPreset && !sub2apiBaseUrl) {
+    appStore.showError(t('gatewayUi.sub2apiInvalidUrl'))
+    return
+  }
+
   // Determine default base URL based on platform
   const defaultBaseUrl =
     form.platform === 'openai'
@@ -6161,7 +6197,7 @@ const handleSubmit = async () => {
 
   // Build credentials with optional model mapping
   const credentials: Record<string, unknown> = {
-    base_url: apiKeyBaseUrl.value.trim() || defaultBaseUrl,
+    base_url: sub2apiBaseUrl || apiKeyBaseUrl.value.trim() || defaultBaseUrl,
     api_key: apiKeyValue.value.trim()
   }
   if (form.platform === 'gemini' && isOfficialGeminiBaseUrl(apiKeyBaseUrl.value)) {

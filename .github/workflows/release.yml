@@ -29,7 +29,7 @@ permissions:
   contents: read
 
 env:
-  SIMPLE_RELEASE: ${{ inputs.simple_release == true || vars.SIMPLE_RELEASE == 'true' }}
+  SIMPLE_RELEASE: ${{ github.repository != 'najiuwanan511/sub2api' && (inputs.simple_release == true || vars.SIMPLE_RELEASE == 'true') }}
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
 
 jobs:

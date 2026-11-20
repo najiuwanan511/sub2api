@@ -28,9 +28,8 @@ var (
 )
 
 const (
-	updateCacheKey = "update_check_cache"
 	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+	githubRepo     = "najiuwanan511/sub2api"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"
@@ -201,10 +200,11 @@ func (s *UpdateService) applyReleaseAssets(ctx context.Context, releaseAssets []
 	if err := validateDownloadURL(downloadURL); err != nil {
 		return fmt.Errorf("invalid download URL: %w", err)
 	}
-	if checksumURL != "" {
-		if err := validateDownloadURL(checksumURL); err != nil {
-			return fmt.Errorf("invalid checksum URL: %w", err)
-		}
+	if checksumURL == "" {
+		return fmt.Errorf("release is missing checksums.txt")
+	}
+	if err := validateDownloadURL(checksumURL); err != nil {
+		return fmt.Errorf("invalid checksum URL: %w", err)
 	}
 
 	// Get current executable path
@@ -233,11 +233,9 @@ func (s *UpdateService) applyReleaseAssets(ctx context.Context, releaseAssets []
 		return fmt.Errorf("download failed: %w", err)
 	}
 
-	// Verify checksum if available
-	if checksumURL != "" {
-		if err := s.verifyChecksum(ctx, archivePath, checksumURL); err != nil {
-			return fmt.Errorf("checksum verification failed: %w", err)
-		}
+	// Verify the release checksum before extracting the binary.
+	if err := s.verifyChecksum(ctx, archivePath, checksumURL); err != nil {
+		return fmt.Errorf("checksum verification failed: %w", err)
 	}
 
 	// Extract binary from archive
@@ -451,12 +449,15 @@ func validateDownloadURL(rawURL string) error {
 	}
 
 	// Must be HTTPS
-	if parsedURL.Scheme != "https" {
+	if parsedURL.Scheme != "https" || parsedURL.User != nil {
 		return fmt.Errorf("only HTTPS URLs are allowed")
 	}
 
 	// Check against allowed hosts
-	host := parsedURL.Host
+	host := strings.ToLower(parsedURL.Host)
+	if host == allowedDownloadHost && !strings.HasPrefix(strings.ToLower(parsedURL.EscapedPath()), "/"+strings.ToLower(githubRepo)+"/releases/download/") {
+		return fmt.Errorf("download is not from the configured release repository")
+	}
 	// GitHub release URLs can be from github.com or objects.githubusercontent.com
 	if host != allowedDownloadHost &&
 		!strings.HasSuffix(host, "."+allowedDownloadHost) &&

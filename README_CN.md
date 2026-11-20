@@ -266,6 +266,14 @@ fast_mode = true
 
 ---
 
+## 定制版与更新
+
+本仓库基于 [Wei-Shaw/Sub2API](https://github.com/Wei-Shaw/sub2api)。本仓库的正式版本由 GitHub Actions 在推送 `vX.Y.Z` 标签后发布，提供二进制包、`checksums.txt` 和 `ghcr.io/najiuwanan511/sub2api` 镜像。不要混用官方镜像和本仓库发行包。
+
+- **Linux 二进制安装**：用下方脚本安装，后台版本菜单可从本仓库 Releases 检查和安装后续版本。
+- **Docker Compose**：在安装目录执行 `docker compose pull && docker compose up -d`。不要在容器里用二进制替换来升级，容器重建时会丢失该改动。
+- **接入上级**：在「账号管理 → 接入上级 Sub2API」填入上级站点和 OpenAI 分组签发的 API Key，选本地对应分组。可同步模型，保存后进入连通测试。
+
 ## 部署方式
 
 ### 方式一：脚本安装（推荐）
@@ -282,7 +290,7 @@ fast_mode = true
 #### 安装步骤
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash
 ```
 
 脚本会自动：
@@ -332,7 +340,7 @@ sudo journalctl -u sub2api -f
 sudo systemctl restart sub2api
 
 # 卸载
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/install.sh | sudo bash -s -- uninstall -y
 ```
 
 ---
@@ -355,7 +363,7 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 mkdir -p sub2api-deploy && cd sub2api-deploy
 
 # 下载并运行部署准备脚本
-curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/docker-deploy.sh | bash
+curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh | bash
 
 # 启动服务
 docker compose up -d
@@ -377,7 +385,7 @@ docker compose logs -f sub2api
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone https://github.com/najiuwanan511/sub2api.git
 cd sub2api/deploy
 
 # 2. 复制环境配置文件
@@ -521,7 +529,7 @@ rm -rf data/ postgres_data/ redis_data/
 Apple 芯片 Mac 在 macOS 26 上可使用 Apple `container` 1.1.0 或更高版本运行完整的 Sub2API、PostgreSQL 和 Redis：
 
 ```bash
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone https://github.com/najiuwanan511/sub2api.git
 cd sub2api/deploy
 ./apple-container.sh init
 ./apple-container.sh up
@@ -547,7 +555,7 @@ cd sub2api/deploy
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone https://github.com/najiuwanan511/sub2api.git
 cd sub2api
 
 # 2. 安装 pnpm（如果还没有安装）

@@ -131,6 +131,7 @@ export interface GroupStatsResponse {
 
 export interface DashboardSnapshotV2Params extends TrendParams {
   include_stats?: boolean
+  include_token_speed?: boolean
   include_trend?: boolean
   include_model_stats?: boolean
   include_group_stats?: boolean
@@ -147,6 +148,7 @@ export interface DashboardSnapshotV2Response {
   start_date: string
   end_date: string
   granularity: string
+  average_output_tokens_per_second?: number
   stats?: DashboardSnapshotV2Stats
   trend?: TrendDataPoint[]
   models?: ModelStat[]

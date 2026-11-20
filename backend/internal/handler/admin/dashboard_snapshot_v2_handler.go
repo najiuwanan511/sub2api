@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -23,7 +24,8 @@ type dashboardSnapshotV2Stats struct {
 }
 
 type dashboardSnapshotV2Response struct {
-	GeneratedAt string `json:"generated_at"`
+	GeneratedAt                  string   `json:"generated_at"`
+	AverageOutputTokensPerSecond *float64 `json:"average_output_tokens_per_second,omitempty"`
 
 	StartDate   string `json:"start_date"`
 	EndDate     string `json:"end_date"`
@@ -63,6 +65,7 @@ type dashboardSnapshotV2CacheKey struct {
 	NativeCompactionV2    *bool  `json:"native_compaction_v2"`
 	BillingType           *int8  `json:"billing_type"`
 	UpstreamModelMismatch *bool  `json:"upstream_model_mismatch"`
+	IncludeTokenSpeed     bool   `json:"include_token_speed"`
 	IncludeStats          bool   `json:"include_stats"`
 	IncludeTrend          bool   `json:"include_trend"`
 	IncludeModels         bool   `json:"include_models"`
@@ -78,6 +81,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 		granularity = "day"
 	}
 
+	includeTokenSpeed := parseBoolQueryWithDefault(c.Query("include_token_speed"), false)
 	includeStats := parseBoolQueryWithDefault(c.Query("include_stats"), true)
 	includeTrend := parseBoolQueryWithDefault(c.Query("include_trend"), true)
 	includeModels := parseBoolQueryWithDefault(c.Query("include_model_stats"), true)
@@ -110,6 +114,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 		NativeCompactionV2:    filters.NativeCompactionV2,
 		BillingType:           filters.BillingType,
 		UpstreamModelMismatch: filters.UpstreamModelMismatch,
+		IncludeTokenSpeed:     includeTokenSpeed,
 		IncludeStats:          includeStats,
 		IncludeTrend:          includeTrend,
 		IncludeModels:         includeModels,
@@ -126,6 +131,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 			endTime,
 			granularity,
 			filters,
+			includeTokenSpeed,
 			includeStats,
 			includeTrend,
 			includeModels,
@@ -155,7 +161,7 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 	startTime, endTime time.Time,
 	granularity string,
 	filters *dashboardSnapshotV2Filters,
-	includeStats, includeTrend, includeModels, includeGroups, includeUsersTrend bool,
+	includeTokenSpeed, includeStats, includeTrend, includeModels, includeGroups, includeUsersTrend bool,
 	usersTrendLimit int,
 ) (*dashboardSnapshotV2Response, error) {
 	resp := &dashboardSnapshotV2Response{
@@ -173,6 +179,22 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 		resp.Stats = &dashboardSnapshotV2Stats{
 			DashboardStats: *stats,
 			Uptime:         int64(time.Since(h.startTime).Seconds()),
+		}
+	}
+
+	if includeTokenSpeed {
+		// Keep a missing or unavailable speed measurement from hiding other dashboard data.
+		speed, err := h.dashboardService.GetAverageOutputTokenSpeed(ctx, usagestats.UsageLogFilters{
+			StartTime: &startTime, EndTime: &endTime,
+			UserID: filters.UserID, APIKeyID: filters.APIKeyID, AccountID: filters.AccountID, GroupID: filters.GroupID,
+			Model: filters.Model, RequestType: filters.RequestType, Stream: filters.Stream,
+			NativeCompactionV2: filters.NativeCompactionV2, BillingType: filters.BillingType,
+			UpstreamModelMismatch: filters.UpstreamModelMismatch,
+		})
+		if err != nil {
+			logger.LegacyPrintf("handler.admin.dashboard", "Unable to load output token speed: %v", err)
+		} else {
+			resp.AverageOutputTokensPerSecond = speed
 		}
 	}
 

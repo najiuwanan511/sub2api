@@ -1,4 +1,12 @@
 export default {
+  "connectSub2API": "Connect upstream Sub2API",
+  "sub2apiSetupHint": "Uses the OpenAI-compatible protocol. Use an upstream API key issued for an OpenAI group, then select a matching local group. You can sync upstream models. After saving, select a model and start the connection test.",
+  "sub2apiUrlHint": "Paste the upstream site, /v1 base, or a common OpenAI endpoint. It will be normalized to a /v1 base URL.",
+  "sub2apiInvalidUrl": "Enter a full HTTP(S) URL without credentials, query parameters, or a fragment.",
+  "sub2apiSaveAndTest": "Save and open test",
+  "tokenSpeed": "Average Token Speed",
+  "tokenSpeedHint": "Text streams with valid timing only: total output tokens divided by total time after the first token (seconds). Excludes input, cache, non-streaming and image requests.",
+  "tokenSpeedPeriod": "{start} to {end}",
   "heroLine1": "Turn AI subscriptions",
   "heroLine2": "into one API",
   "heroDesc": "Connect multiple AI services through one gateway for access control, billing, scheduling and request forwarding.",

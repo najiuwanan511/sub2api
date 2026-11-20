@@ -1,9 +1,20 @@
 <template>
   <AppLayout>
     <div class="gateway-dashboard space-y-6">
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <DateRangePicker
+          v-model:start-date="startDate"
+          v-model:end-date="endDate"
+          @change="onDateRangeChange"
+        />
+        <button @click="loadDashboardStats" :disabled="chartsLoading" class="btn btn-secondary">
+          {{ t('common.refresh') }}
+        </button>
+      </div>
       <GatewayDashboardOverview
         :stats="stats" :trend="trendData" :groups="groupStats" :models="rankedModels"
         :granularity="granularity" :start="startDate" :end="endDate"
+        :token-speed="tokenSpeed"
         :loading="loading || chartsLoading" :failed="snapshotFailed"
         :models-loading="rankModelsLoading" :models-failed="rankModelsFailed"
         :ops-disabled="opsDisabled" :ops-partial="opsPartial"
@@ -280,19 +291,6 @@
           <!-- Date Range Filter -->
           <div class="card p-4">
             <div class="flex flex-wrap items-center gap-4">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >{{ t('admin.dashboard.timeRange') }}:</span
-                >
-                <DateRangePicker
-                  v-model:start-date="startDate"
-                  v-model:end-date="endDate"
-                  @change="onDateRangeChange"
-                />
-              </div>
-              <button @click="loadDashboardStats" :disabled="chartsLoading" class="btn btn-secondary">
-                {{ t('common.refresh') }}
-              </button>
               <div class="ml-auto flex items-center gap-2">
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
                   >{{ t('admin.dashboard.granularity') }}:</span
@@ -426,6 +424,7 @@ const trendData = ref<TrendDataPoint[]>([])
 const groupStats = ref<GroupStat[]>([])
 const rankedModels = ref<ModelStat[]>([])
 const snapshotFailed = ref(false)
+const tokenSpeed = ref<number | null>(null)
 const rankModelsLoading = ref(false)
 const rankModelsFailed = ref(false)
 const detailsOpen = ref(false)
@@ -747,6 +746,7 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
       end_date: endDate.value,
       granularity: granularity.value,
       include_stats: includeStats,
+      include_token_speed: true,
       include_trend: true,
       include_model_stats: true,
       include_group_stats: true,
@@ -756,12 +756,14 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
     if (includeStats && response.stats) {
       stats.value = response.stats
     }
+    tokenSpeed.value = response.average_output_tokens_per_second ?? null
     trendData.value = response.trend || []
     groupStats.value = response.groups || []
     modelStats.value = response.models || []
   } catch (error) {
     if (currentSeq !== chartLoadSeq) return
     snapshotFailed.value = true
+    tokenSpeed.value = null
     trendData.value = []
     groupStats.value = []
     modelStats.value = []

@@ -15,8 +15,13 @@
             class="gateway-account-actions"
             :loading="loading"
             @refresh="handleManualRefresh"
-            @create="showCreate = true"
+            @create="openCreateAccount(false)"
           >
+            <template #beforeCreate>
+              <button type="button" class="btn btn-secondary" data-testid="connect-upstream-sub2api" @click="openCreateAccount(true)">
+                <Icon name="link" size="sm" aria-hidden="true" />{{ t('gatewayUi.connectSub2API') }}
+              </button>
+            </template>
             <template #after>
               <!-- Auto Refresh Dropdown -->
               <div class="relative" ref="autoRefreshDropdownRef">
@@ -457,7 +462,7 @@
       </template>
       <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" @update:pageSize="handlePageSizeChange" /></template>
     </TablePageLayout>
-    <CreateAccountModal :show="showCreate" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="reload" />
+    <CreateAccountModal :show="showCreate" :sub2api-preset="createSub2API" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="reload" @test-created="openTestForAccount" />
     <EditAccountModal :show="showEdit" :account="edAcc" :proxies="proxies" :groups="groups" @close="showEdit = false" @updated="handleAccountUpdated" />
     <ReAuthAccountModal :show="showReAuth" :account="reAuthAcc" @close="closeReAuthModal" @reauthorized="handleAccountUpdated" />
     <AccountTestModal :show="showTest" :account="testingAcc" @close="closeTestModal" />
@@ -598,6 +603,11 @@ const selTypes = computed<AccountType[]>(() => {
   return [...types]
 })
 const showCreate = ref(false)
+const createSub2API = ref(false)
+const openCreateAccount = (sub2api: boolean) => {
+  createSub2API.value = sub2api
+  showCreate.value = true
+}
 const showEdit = ref(false)
 const showSync = ref(false)
 const showImportData = ref(false)
@@ -2365,8 +2375,9 @@ const accountExportStepUp = useStepUp()
 const closeTestModal = () => { showTest.value = false; testingAcc.value = null }
 const closeStatsModal = () => { showStats.value = false; statsAcc.value = null }
 const closeReAuthModal = () => { showReAuth.value = false; reAuthAcc.value = null }
-const handleTest = async (a: AccountListItem) => {
-  const account = await loadAccountDetails(a)
+const handleTest = (a: AccountListItem) => openTestForAccount(a.id)
+const openTestForAccount = async (id: number) => {
+  const account = await loadAccountDetails({ id })
   if (!account) return
   testingAcc.value = account
   showTest.value = true

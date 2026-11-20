@@ -655,7 +655,7 @@ func (r *usageLogRepository) GetGlobalStats(ctx context.Context, startTime, endT
 }
 
 // GetStatsWithFilters gets usage statistics with optional filters
-func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters UsageLogFilters) (*UsageStats, error) {
+func usageStatsScope(filters UsageLogFilters) ([]string, []any) {
 	conditions := make([]string, 0, 9)
 	args := make([]any, 0, 9)
 
@@ -694,6 +694,29 @@ func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters Us
 		conditions = append(conditions, fmt.Sprintf("created_at < $%d", len(args)+1))
 		args = append(args, *filters.EndTime)
 	}
+	return conditions, args
+}
+
+// GetAverageOutputTokenSpeed uses only text HTTP streams with complete timing.
+// Pool the tokens and generation times rather than averaging per-request rates.
+func (r *usageLogRepository) GetAverageOutputTokenSpeed(ctx context.Context, filters UsageLogFilters) (*float64, error) {
+	conditions, args := usageStatsScope(filters)
+	streamCondition, streamArgs := buildRequestTypeFilterCondition(len(args)+1, int16(service.RequestTypeStream))
+	conditions = append(conditions, streamCondition, "image_count = 0", "output_tokens > 0", "first_token_ms > 0", "duration_ms > first_token_ms")
+	args = append(args, streamArgs...)
+	var value sql.NullFloat64
+	query := `SELECT 1000.0 * SUM(output_tokens) / NULLIF(SUM(duration_ms - first_token_ms), 0) FROM usage_logs ` + buildWhere(conditions)
+	if err := scanSingleRow(ctx, r.sql, query, args, &value); err != nil {
+		return nil, err
+	}
+	if !value.Valid {
+		return nil, nil
+	}
+	return &value.Float64, nil
+}
+
+func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters UsageLogFilters) (*UsageStats, error) {
+	conditions, args := usageStatsScope(filters)
 
 	query := fmt.Sprintf(`
 		WITH scoped AS (

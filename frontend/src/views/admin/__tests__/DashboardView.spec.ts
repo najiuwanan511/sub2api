@@ -180,8 +180,19 @@ describe('admin DashboardView', () => {
       start_date: formatLocalDate(start),
       end_date: formatLocalDate(now),
       granularity: 'day',
-      include_group_stats: true
+      include_group_stats: true,
+      include_token_speed: true
     }))
+    const overview = wrapper.getComponent({ name: 'GatewayDashboardOverview' })
+    expect(overview.props('tokenSpeed')).toBeNull()
+
+    getSnapshotV2.mockResolvedValueOnce({ average_output_tokens_per_second: 47.6 })
+    await wrapper.getComponent({ name: 'DateRangePicker' }).vm.$emit('change', {
+      startDate: formatLocalDate(now), endDate: formatLocalDate(now)
+    })
+    await flushPromises()
+    expect(getSnapshotV2).toHaveBeenLastCalledWith(expect.objectContaining({ include_stats: false, include_token_speed: true }))
+    expect(overview.props('tokenSpeed')).toBe(47.6)
     wrapper.unmount()
   })
 })

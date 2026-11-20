@@ -1,7 +1,7 @@
 <template>
   <section class="gateway-dashboard-overview" :aria-label="t('nav.dashboard')">
     <div class="gateway-stat-grid">
-      <article v-for="metric in metrics" :key="metric.key" class="card gateway-stat" :data-metric="metric.key">
+      <article v-for="metric in metrics" :key="metric.key" class="card gateway-stat" :data-metric="metric.key" :title="metric.key === 'token-speed' ? t('gatewayUi.tokenSpeedHint') : undefined">
         <div class="gateway-stat-label"><span :data-tone="metric.tone" class="gateway-stat-icon"><Icon :name="metric.icon" size="sm" /></span>{{ metric.label }}</div>
         <strong>{{ metric.value }}</strong>
         <p>
@@ -80,6 +80,7 @@ import type { DashboardStats, TrendDataPoint, GroupStat, ModelStat } from '@/typ
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Filler)
 const props = defineProps<{
   stats: DashboardStats | null
+  tokenSpeed: number | null
   trend: TrendDataPoint[]
   groups: GroupStat[]
   models: ModelStat[]
@@ -98,6 +99,7 @@ const props = defineProps<{
   errorRate: number | null
 }>()
 const { t, locale } = useI18n()
+const tokenSpeedFormatter = computed(() => new Intl.NumberFormat(locale.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }))
 const emptyMessage = computed(() => t(props.failed ? 'gatewayUi.dataError' : 'admin.dashboard.noDataAvailable'))
 const trendMetrics = [
   { key: 'requests', label: 'gatewayUi.requests' }, { key: 'total_tokens', label: 'admin.dashboard.tokens' },
@@ -136,6 +138,9 @@ const metrics = computed(() => {
     { key: 'requests', label: t('admin.dashboard.todayRequests'), icon: 'bolt', tone: 'blue', value: number(s?.today_requests), delta: deltaRequests, note: deltaRequests == null ? `${t('common.total')}: ${number(s?.total_requests)}` : t('gatewayUi.dayChange') },
     { key: 'tokens', label: t('admin.dashboard.todayTokens'), icon: 'cube', tone: 'cyan', value: compact(s?.today_tokens), delta: deltaTokens, note: deltaTokens == null ? `${t('common.total')}: ${compact(s?.total_tokens)}` : t('gatewayUi.dayChange') },
     { key: 'cost', label: t('gatewayUi.actualToday'), icon: 'dollar', tone: 'green', value: money(s?.today_actual_cost), delta: null, note: `${t('admin.dashboard.standard')} ${money(s?.today_cost)}` },
+    { key: 'token-speed', label: t('gatewayUi.tokenSpeed'), icon: 'bolt', tone: 'blue',
+      value: !props.loading && valid(props.tokenSpeed) ? `${tokenSpeedFormatter.value.format(props.tokenSpeed)} tok/s` : '—',
+      delta: null, note: t('gatewayUi.tokenSpeedPeriod', { start: props.start, end: props.end }) },
     { key: 'pool', label: t('gatewayUi.poolAvailable'), icon: 'shield', tone: 'amber', value: percent(availability), delta: null, note: s ? t('gatewayUi.normalRange', { normal: number(s.normal_accounts), total: number(s.total_accounts) }) : '—' }
   ] as const
 })

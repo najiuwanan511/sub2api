@@ -1,4 +1,12 @@
 export default {
+  "connectSub2API": "接入上级 Sub2API",
+  "sub2apiSetupHint": "已选 OpenAI 兼容协议。使用上级「API 密钥」中为 OpenAI 分组签发的 Key，绑定本地对应分组。可从上级同步模型；保存后会打开连通测试，由你选择模型并启动。",
+  "sub2apiUrlHint": "可粘贴站点地址、带 /v1 的地址或常用 OpenAI 接口地址，会自动整理为 /v1 Base URL。",
+  "sub2apiInvalidUrl": "请输入完整的 HTTP(S) 地址，不要包含账号密码、查询参数或锚点。",
+  "sub2apiSaveAndTest": "保存并进入测试",
+  "tokenSpeed": "平均 Token 速度",
+  "tokenSpeedHint": "仅统计有首 Token 和结束耗时的文本流式请求：输出 Token 总数 ÷（总耗时 − 首 Token 耗时）之和（秒）。不含输入、缓存、非流式和图像请求。",
+  "tokenSpeedPeriod": "{start} 至 {end}",
   "heroLine1": "把 AI 订阅",
   "heroLine2": "统一成一套 API",
   "heroDesc": "统一接入多个 AI 服务。由网关处理鉴权、计费、调度与请求转发。",

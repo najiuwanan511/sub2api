@@ -279,7 +279,7 @@
 .gateway-admin .gateway-avatar { border-radius: 50%; background: linear-gradient(135deg, #5488f0, #8154ee); }
 .gateway-admin .gateway-scrim { display: none; }
 .gateway-dashboard-overview, .gateway-dashboard-grid, .gateway-stat-grid, .gateway-runtime-grid { display: grid; gap: 16px; min-width: 0; }
-.gateway-stat-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.gateway-stat-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
 .gateway-dashboard-primary { grid-template-columns: minmax(0,2fr) minmax(0,1fr); }
 .gateway-dashboard-secondary, .gateway-runtime-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .gateway-admin main :is(.gateway-stat,.gateway-panel) { border-radius: 14px; border: 1px solid var(--gw-line); }

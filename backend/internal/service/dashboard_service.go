@@ -124,6 +124,17 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*usagestats.D
 	return stats, nil
 }
 
+// GetAverageOutputTokenSpeed returns nil when there are no eligible timing samples.
+func (s *DashboardService) GetAverageOutputTokenSpeed(ctx context.Context, filters usagestats.UsageLogFilters) (*float64, error) {
+	type tokenSpeedRepository interface {
+		GetAverageOutputTokenSpeed(context.Context, usagestats.UsageLogFilters) (*float64, error)
+	}
+	if repo, ok := s.usageRepo.(tokenSpeedRepository); ok {
+		return repo.GetAverageOutputTokenSpeed(ctx, filters)
+	}
+	return nil, nil
+}
+
 func (s *DashboardService) GetUsageTrendWithFilters(ctx context.Context, startTime, endTime time.Time, granularity string, userID, apiKeyID, accountID, groupID int64, model string, requestType *int16, stream *bool, billingType *int8) ([]usagestats.TrendDataPoint, error) {
 	trend, err := s.usageRepo.GetUsageTrendWithFilters(ctx, startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, billingType)
 	if err != nil {

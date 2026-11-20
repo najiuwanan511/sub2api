@@ -9,7 +9,8 @@
 #   - Creates necessary data directories
 #
 # After running this script, you can start services with:
-#   docker-compose up -d
+#   docker compose up -d
+# Use --domain api.example.com to enable automatic HTTPS via Caddy.
 # =============================================================================
 
 set -e
@@ -59,8 +60,51 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Only accept DNS names, not URLs, ports, wildcards or config syntax.
+valid_domain() {
+    local domain="$1" label
+    local -a labels
+    local LC_ALL=C
+    [[ ${#domain} -le 253 && "$domain" =~ ^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+$ ]] || return 1
+    IFS=. read -r -a labels <<< "$domain"
+    [[ "${labels[${#labels[@]}-1]}" =~ [a-zA-Z] ]] || return 1
+    for label in "${labels[@]}"; do
+        [[ ${#label} -le 63 && "$label" != -* && "$label" != *- ]] || return 1
+    done
+}
+
+download_file() {
+    local source="$1" target="$2"
+    if command_exists curl; then
+        curl -fsSL "${GITHUB_RAW_URL}/$source" -o "$target"
+    else
+        wget -q "${GITHUB_RAW_URL}/$source" -O "$target"
+    fi
+}
+
+usage() {
+    echo "Usage: $0 [--domain api.example.com | --http]"
+    echo "A domain enables automatic HTTPS on 443. Use --http to keep port 8080."
+}
+
 # Main installation function
 main() {
+    local domain="" bind_host="0.0.0.0" access_url="http://localhost:8080"
+    case "${1:-}" in
+        --domain)
+            if [ "$#" -ne 2 ] || ! valid_domain "$2"; then
+                print_error 'Enter a DNS name such as api.example.com, without https:// or a port.'
+                return 1
+            fi
+            domain="$2"
+            ;;
+        --http)
+            [ "$#" -eq 1 ] || { usage >&2; return 1; }
+            ;;
+        -h|--help) usage; return 0 ;;
+        '') [ "$#" -eq 0 ] || { usage >&2; return 1; } ;;
+        *) usage >&2; return 1 ;;
+    esac
     echo ""
     echo "=========================================="
     echo "  Sub2API Deployment Preparation"
@@ -73,37 +117,38 @@ main() {
         exit 1
     fi
 
-    # Check if deployment already exists
-    if [ -f "docker-compose.yml" ] && [ -f ".env" ]; then
-        print_warning "Deployment files already exist in current directory."
-        read -p "Overwrite existing files? (y/N): " -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Cancelled."
-            exit 0
-        fi
-    fi
-
-    # Download docker-compose.local.yml and save as docker-compose.yml
-    print_info "Downloading docker-compose.yml..."
-    if command_exists curl; then
-        curl -sSL "${GITHUB_RAW_URL}/docker-compose.local.yml" -o docker-compose.yml
-    elif command_exists wget; then
-        wget -q "${GITHUB_RAW_URL}/docker-compose.local.yml" -O docker-compose.yml
-    else
+    if ! command_exists curl && ! command_exists wget; then
         print_error "Neither curl nor wget is installed. Please install one of them."
         exit 1
     fi
-    print_success "Downloaded docker-compose.yml"
 
-    # Download .env.example
-    print_info "Downloading .env.example..."
-    if command_exists curl; then
-        curl -sSL "${GITHUB_RAW_URL}/.env.example" -o .env.example
-    else
-        wget -q "${GITHUB_RAW_URL}/.env.example" -O .env.example
+    # Never regenerate database credentials or replace an existing deployment.
+    local existing
+    for existing in .env .env.example Caddyfile.https data postgres_data redis_data \
+        compose.{yml,yaml} docker-compose.{yml,yaml} {compose,docker-compose}.override.{yml,yaml}; do
+        if [ -e "$existing" ] || [ -L "$existing" ]; then
+            print_error "Existing deployment file or directory: $existing. Run the installer in a new directory."
+            return 1
+        fi
+    done
+
+    if [ "$#" -eq 0 ] && [ -t 0 ]; then
+        read -r -p '域名（自动启用 HTTPS:443，直接回车使用 HTTP:8080）：' domain || return 1
+        if [ -n "$domain" ] && ! valid_domain "$domain"; then
+            print_error 'Enter a DNS name such as api.example.com, without https:// or a port.'
+            return 1
+        fi
     fi
-    print_success "Downloaded .env.example"
+    if [ -n "$domain" ]; then
+        bind_host="127.0.0.1"
+        access_url="https://$domain"
+        print_info 'Point the domain to this host and allow inbound TCP 80 and 443 before starting.'
+        download_file Caddyfile.https Caddyfile.https
+    fi
+
+    print_info "Downloading docker-compose.yml and .env.example..."
+    download_file docker-compose.local.yml docker-compose.yml
+    download_file .env.example .env.example
 
     # Generate .env file with auto-generated secrets
     print_info "Generating secure secrets..."
@@ -115,22 +160,29 @@ main() {
     POSTGRES_PASSWORD=$(generate_secret)
     ADMIN_EMAIL=$(generate_admin_email)
 
-    # Create .env from .env.example
-    cp .env.example .env
+    # Create private configuration before writing generated secrets.
+    (umask 077; cp .env.example .env)
+    chmod 600 .env
 
     # Update .env with generated secrets (cross-platform compatible)
     if sed --version >/dev/null 2>&1; then
         # GNU sed (Linux)
+        sed -i "s/^BIND_HOST=.*/BIND_HOST=${bind_host}/" .env
         sed -i "s/^JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" .env
         sed -i "s/^TOTP_ENCRYPTION_KEY=.*/TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY}/" .env
         sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${POSTGRES_PASSWORD}/" .env
         sed -i "s/^ADMIN_EMAIL=.*/ADMIN_EMAIL=${ADMIN_EMAIL}/" .env
     else
         # BSD sed (macOS)
+        sed -i '' "s/^BIND_HOST=.*/BIND_HOST=${bind_host}/" .env
         sed -i '' "s/^JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" .env
         sed -i '' "s/^TOTP_ENCRYPTION_KEY=.*/TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY}/" .env
         sed -i '' "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${POSTGRES_PASSWORD}/" .env
         sed -i '' "s/^ADMIN_EMAIL=.*/ADMIN_EMAIL=${ADMIN_EMAIL}/" .env
+    fi
+
+    if [ -n "$domain" ]; then
+        printf '\nSUB2API_DOMAIN=%s\nCOMPOSE_PROFILES=https\n' "$domain" >> .env
     fi
 
     # Create data directories
@@ -138,8 +190,6 @@ main() {
     mkdir -p data postgres_data redis_data
     print_success "Created data directories"
 
-    # Set secure permissions for .env file (readable/writable only by owner)
-    chmod 600 .env
     echo ""
 
     # Display completion message
@@ -160,6 +210,9 @@ main() {
     echo "  docker-compose.yml        - Docker Compose configuration"
     echo "  .env                      - Environment variables (generated secrets)"
     echo "  .env.example              - Example template (for reference)"
+    if [ -n "$domain" ]; then
+        echo "  Caddyfile.https           - HTTPS reverse proxy configuration"
+    fi
     echo "  data/                     - Application data (will be created on first run)"
     echo "  postgres_data/            - PostgreSQL data"
     echo "  redis_data/               - Redis data"
@@ -167,13 +220,13 @@ main() {
     echo "Next steps:"
     echo "  1. (Optional) Edit .env to customize configuration"
     echo "  2. Start services:"
-    echo "     docker-compose up -d"
+    echo "     docker compose up -d"
     echo ""
     echo "  3. View logs:"
-    echo "     docker-compose logs -f sub2api"
+    echo "     docker compose logs -f sub2api"
     echo ""
     echo "  4. Access Web UI:"
-    echo "     http://localhost:8080"
+    echo "     $access_url"
     echo ""
     print_info "If admin password is not set in .env, it will be auto-generated."
     print_info "Check logs for the generated admin password on first startup."

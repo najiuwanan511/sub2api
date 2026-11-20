@@ -8,13 +8,15 @@
 
 需先安装 Docker 和 Compose v2，并确保有 `curl` 和 OpenSSL。安装会自动配置 PostgreSQL 和 Redis。
 
-**一键安装**（在尚未创建 `sub2api-deploy` 的目录执行）：
+**一键安装**（在新目录执行）：有域名时，把下面的 `api.example.com` 换成自己的域名。先将 DNS 指向服务器，并开放 TCP `80` 和 `443`，确保这两个端口没被其他服务占用。
 
 ```bash
 mkdir sub2api-deploy && cd sub2api-deploy &&
   curl -fsSLo docker-deploy.sh https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh &&
-  bash docker-deploy.sh && docker compose up -d
+  bash docker-deploy.sh --domain api.example.com && docker compose up -d
 ```
+
+安装会自带 Caddy，自动申请和续期证书。访问 `https://你的域名` 即可，不用写端口，`8080` 仅在本机监听。没有域名时，把 `--domain api.example.com` 改成 `--http`，使用 `8080`。已有反向代理时，也请用 `--http` 安装，再把生成的 `.env` 中 `BIND_HOST` 改为 `127.0.0.1` 后启动，由现有代理接管 HTTPS（代理须与宿主机共用网络）。
 
 **更新**（在部署目录执行，只更新 Sub2API）：
 
@@ -54,9 +56,7 @@ curl -fsSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/i
 
 ## 安装后
 
-默认访问 `http://服务器IP:8080`。二进制版首次访问时按向导配置；Docker 版可在部署目录运行 `docker compose logs sub2api` 查看首次登录信息。
-
-**绑定域名后不想带端口？** DNS 解析不会把 HTTPS 的 `443` 自动转到 `8080`。在同一台服务器上用 Nginx 或 Caddy 配置 HTTPS 反向代理，将域名的 `443` 请求转发到 `http://127.0.0.1:8080`（或实际的宿主机端口）。确认 `https://你的域名` 能正常打开后，再关闭公网对 `8080` 的访问。
+Docker 版在部署目录运行 `docker compose logs sub2api` 查看首次登录信息；HTTPS 出现问题可看 `docker compose logs caddy`。二进制版在 `http://服务器IP:8080` 完成首次配置；如果需要 HTTPS，请用自己的反向代理。
 
 [更多部署说明](deploy/README.md) · [开源许可证（LGPL v3 或更高版本）](LICENSE)
 

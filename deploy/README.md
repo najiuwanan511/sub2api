@@ -52,39 +52,18 @@ See [APPLE_CONTAINER.md](./APPLE_CONTAINER.md) for configuration, upgrades, pers
 
 ### Method 1: One-Click Deployment (Recommended)
 
-Use the automated preparation script for the easiest setup:
+Run the preparation script in a new directory (it will not overwrite an existing deployment):
 
 ```bash
-# Download and run the preparation script
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh | bash
-
-# Or download first, then run
-curl -sSL https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh -o docker-deploy.sh
-chmod +x docker-deploy.sh
-./docker-deploy.sh
+curl -fsSLo docker-deploy.sh https://raw.githubusercontent.com/najiuwanan511/sub2api/main/deploy/docker-deploy.sh
+bash docker-deploy.sh --domain api.example.com && docker compose up -d
 ```
 
-**What the script does:**
-- Downloads `docker-compose.local.yml` and `.env.example`
-- Automatically generates secure secrets (JWT_SECRET, TOTP_ENCRYPTION_KEY, POSTGRES_PASSWORD)
-- Creates `.env` file with generated secrets
-- Creates necessary data directories (data/, postgres_data/, redis_data/)
-- **Displays generated credentials** (POSTGRES_PASSWORD, JWT_SECRET, etc.)
+Point the domain to this host and allow inbound TCP 80 and 443 first. The installer enables the Caddy profile and publishes the application's port 8080 on loopback only. Caddy redirects HTTP to HTTPS, manages TLS certificates, and proxies to the application over the Compose network. Access the UI at `https://api.example.com` and use `docker compose logs caddy` to diagnose HTTPS issues. This preset expects direct client connections; for a CDN see [the trusted-proxy setup](EDGE_SECURITY.md#trusted-client-ips).
 
-**After running the script:**
-```bash
-# Start services
-docker compose -f docker-compose.local.yml up -d
+For an HTTP-only install, pass `--http` instead of `--domain api.example.com`. Access the UI on port 8080 and do not expose it to untrusted clients. The interactive installer prompts for a domain when run without flags.
 
-# View logs
-docker compose -f docker-compose.local.yml logs -f sub2api
-
-# If admin email/password were auto-generated, find them in logs:
-docker compose -f docker-compose.local.yml logs sub2api | grep "Generated admin"
-
-# Access Web UI
-# http://localhost:8080
-```
+In either mode the script writes `docker-compose.yml`, generates private application and database credentials in `.env`, and creates local data directories. Use `docker compose logs sub2api` to find the initial admin login information. Do not delete volumes when removing the containers if you want to retain Caddy's certificate state.
 
 ### Method 2: Manual Deployment
 

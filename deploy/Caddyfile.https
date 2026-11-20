@@ -1,0 +1,7 @@
+{$SUB2API_DOMAIN} {
+	reverse_proxy sub2api:8080 {
+		# Only trust addresses observed at this public edge, not client headers.
+		header_up -CF-Connecting-IP
+		header_up X-Real-IP {remote_host}
+	}
+}

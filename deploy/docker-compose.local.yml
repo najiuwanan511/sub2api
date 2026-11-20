@@ -20,6 +20,28 @@
 # =============================================================================
 
 services:
+  # Optional HTTPS entry point, enabled by docker-deploy.sh when given a domain.
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SUB2API_DOMAIN: ${SUB2API_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile.https:/etc/caddy/Caddyfile:ro,Z
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - https-edge
+    depends_on:
+      sub2api:
+        condition: service_healthy
+
   # ===========================================================================
   # Sub2API Application
   # ===========================================================================
@@ -214,6 +236,7 @@ services:
         condition: service_healthy
     networks:
       - sub2api-network
+      - https-edge
     healthcheck:
       test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://localhost:8080/health"]
       interval: 30s
@@ -296,3 +319,10 @@ services:
 networks:
   sub2api-network:
     driver: bridge
+  https-edge:
+    driver: bridge
+
+# Preserve TLS certificates and Caddy state across container recreation.
+volumes:
+  caddy_data:
+  caddy_config:

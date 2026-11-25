@@ -61,13 +61,13 @@ func isBlockedHostname(hostname string) bool {
 	if hostname == "" {
 		return true
 	}
-	_, blocked := monitorBlockedHostnames[strings.ToLower(hostname)]
+	_, blocked := monitorBlockedHostnames[strings.TrimSuffix(strings.ToLower(hostname), ".")]
 	return blocked
 }
 
 // isPrivateIP 判断 IP 是否落在禁止段（loopback/RFC1918/link-local/ULA 等）。
 func isPrivateIP(ip net.IP) bool {
-	if ip == nil {
+	if ip == nil || !ip.IsGlobalUnicast() {
 		return true
 	}
 	if ip.IsUnspecified() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsInterfaceLocalMulticast() {

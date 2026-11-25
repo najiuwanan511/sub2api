@@ -71,6 +71,10 @@ export default {
     searchPlaceholder: 'Search name or key...',
     endpoints: {
       title: 'API Endpoints',
+      claude: 'Claude Code URL',
+      claudeHint: 'Use as ANTHROPIC_BASE_URL. Claude Code appends /v1/messages.',
+      openAI: 'OpenAI-compatible URL',
+      openAIHint: 'For Codex and OpenAI-compatible clients that expect /v1, including Grok over the OpenAI protocol.',
       default: 'Default',
       copied: 'Copied',
       copiedHint: 'Copied to clipboard',

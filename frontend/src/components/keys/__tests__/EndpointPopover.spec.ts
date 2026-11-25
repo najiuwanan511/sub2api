@@ -4,7 +4,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 const copyToClipboard = vi.fn().mockResolvedValue(true)
 
 const messages: Record<string, string> = {
-  'keys.endpoints.title': 'API 端点',
+  'keys.endpoints.claude': 'Claude Code 地址',
+  'keys.endpoints.openAI': 'OpenAI 兼容地址',
   'keys.endpoints.default': '默认',
   'keys.endpoints.copied': '已复制',
   'keys.endpoints.copiedHint': '已复制到剪贴板',
@@ -59,7 +60,11 @@ describe('EndpointPopover', () => {
       },
     })
 
-    await wrapper.find('[role="button"]').trigger('click')
+    const endpoints = wrapper.findAll('[role="button"]')
+    expect(endpoints.map(endpoint => endpoint.text())).toEqual([
+      'https://default.example.com', 'https://default.example.com/v1',
+    ])
+    await endpoints[1].trigger('click')
     await flushPromises()
 
     expect(copyToClipboard).toHaveBeenCalledWith('https://default.example.com/v1', '已复制')

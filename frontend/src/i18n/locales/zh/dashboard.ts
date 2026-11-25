@@ -71,6 +71,10 @@ export default {
     searchPlaceholder: '搜索名称或Key...',
     endpoints: {
       title: 'API 端点',
+      claude: 'Claude Code 地址',
+      claudeHint: '作为 ANTHROPIC_BASE_URL 使用。Claude Code 会自动拼接 /v1/messages。',
+      openAI: 'OpenAI 兼容地址',
+      openAIHint: '用于 Codex 或需要带 /v1 的 OpenAI 兼容客户端，也适用于使用 OpenAI 协议的 Grok。',
       default: '默认',
       copied: '已复制',
       copiedHint: '已复制到剪贴板',

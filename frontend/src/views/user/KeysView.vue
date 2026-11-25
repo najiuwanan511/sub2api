@@ -25,8 +25,7 @@
             />
           </div>
           <EndpointPopover
-            v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
-            :api-base-url="publicSettings?.api_base_url || ''"
+            :api-base-url="publicSettings?.api_base_url || serviceOrigin"
             :custom-endpoints="publicSettings?.custom_endpoints || []"
           />
           <div v-if="selectedIds.length" class="flex flex-wrap items-center gap-3 text-sm">

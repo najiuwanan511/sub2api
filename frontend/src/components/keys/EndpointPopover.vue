@@ -18,12 +18,13 @@ let copiedResetTimer: number | undefined
 const allEndpoints = computed(() => {
   const items: Array<{ name: string; endpoint: string; description: string; isDefault: boolean }> = []
   if (props.apiBaseUrl) {
-    items.push({
-      name: t('keys.endpoints.title'),
-      endpoint: props.apiBaseUrl,
-      description: '',
-      isDefault: true,
-    })
+    const baseRoot = props.apiBaseUrl.trim().replace(/\/+$/, '').replace(/\/v1$/, '')
+    if (baseRoot) {
+      items.push(
+        { name: t('keys.endpoints.claude'), endpoint: baseRoot, description: t('keys.endpoints.claudeHint'), isDefault: true },
+        { name: t('keys.endpoints.openAI'), endpoint: `${baseRoot}/v1`, description: t('keys.endpoints.openAIHint'), isDefault: true },
+      )
+    }
   }
   for (const ep of props.customEndpoints) {
     items.push({ ...ep, isDefault: false })
@@ -125,6 +126,7 @@ onBeforeUnmount(() => {
         </button>
 
         <a
+          v-if="!item.isDefault || index === 0"
           :href="speedTestUrl(item.endpoint)"
           target="_blank"
           rel="noopener noreferrer"

@@ -310,6 +310,18 @@ export async function testAccount(id: number): Promise<{
   return data
 }
 
+export interface AccountChannelProbeResult {
+  status: 'reachable' | 'unreachable' | 'timeout' | 'blocked' | 'unsupported'
+  latency_ms?: number
+  http_status?: number
+  checked_at: string
+}
+
+export async function probeChannel(id: number): Promise<AccountChannelProbeResult> {
+  const { data } = await apiClient.post<AccountChannelProbeResult>(`/admin/accounts/${id}/channel-probe`)
+  return data
+}
+
 /**
  * Refresh account credentials
  * @param id - Account ID
@@ -1148,6 +1160,7 @@ export const accountsAPI = {
   delete: deleteAccount,
   toggleStatus,
   testAccount,
+  probeChannel,
   refreshCredentials,
   applyOAuthCredentials,
   getStats,

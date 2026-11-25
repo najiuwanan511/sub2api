@@ -48,6 +48,24 @@
       <p v-if="sub2apiPreset" class="rounded-lg bg-primary-50 p-3 text-sm text-primary-800 dark:bg-primary-900/30 dark:text-primary-200">
         {{ t('gatewayUi.sub2apiSetupHint') }}
       </p>
+      <fieldset v-if="sub2apiPreset">
+        <legend class="input-label">{{ t('gatewayUi.sub2apiUpstreamPlatform') }}</legend>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            v-for="option in sub2apiPlatformOptions"
+            :key="option.value"
+            type="button"
+            class="btn btn-secondary flex-1 justify-center gap-2 whitespace-nowrap"
+            :class="{ 'ring-2 ring-primary-500': form.platform === option.value }"
+            :aria-pressed="form.platform === option.value"
+            :data-testid="'sub2api-platform-' + option.value"
+            @click="form.platform = option.value"
+          >
+            <PlatformIcon :platform="option.value" size="sm" />
+            {{ option.label }}
+          </button>
+        </div>
+      </fieldset>
       <div>
         <label class="input-label">{{ t('admin.accounts.accountName') }}</label>
         <input
@@ -270,7 +288,7 @@
       </div>
 
       <!-- Account Type Selection (Anthropic) -->
-      <div v-if="form.platform === 'anthropic'">
+      <div v-if="!sub2apiPreset && form.platform === 'anthropic'">
         <label class="input-label">{{ t('admin.accounts.accountType') }}</label>
         <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4" data-tour="account-form-type">
           <button
@@ -459,7 +477,7 @@
       </div>
 
       <!-- Account Type Selection (Grok) -->
-      <div v-if="form.platform === 'grok'">
+      <div v-if="!sub2apiPreset && form.platform === 'grok'">
         <label class="input-label">{{ t('admin.accounts.accountType') }}</label>
         <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2" data-tour="account-form-type">
           <button
@@ -1510,7 +1528,9 @@
             v-model="apiKeyBaseUrl"
             type="text"
             class="input"
-            :placeholder="sub2apiPreset ? 'https://gateway.example.com/v1' : apiKeyBaseUrlPlaceholder"
+            :placeholder="sub2apiPreset ? 'https://gateway.example.com' : apiKeyBaseUrlPlaceholder"
+            :autocomplete="sub2apiPreset ? 'off' : undefined"
+            :inputmode="sub2apiPreset ? 'url' : undefined"
             :required="sub2apiPreset"
             :aria-invalid="sub2apiPreset && !!apiKeyBaseUrl && !normalizedSub2APIBaseUrl ? true : undefined"
             :aria-describedby="sub2apiPreset ? 'sub2api-base-url-hint' : undefined"
@@ -1518,11 +1538,13 @@
             @blur="normalizeSub2APIField"
           />
           <p v-if="sub2apiPreset" id="sub2api-base-url-hint" class="input-hint">
-            {{ t(apiKeyBaseUrl && !normalizedSub2APIBaseUrl ? 'gatewayUi.sub2apiInvalidUrl' : 'gatewayUi.sub2apiUrlHint') }}
+            {{ t(apiKeyBaseUrl && !normalizedSub2APIBaseUrl
+              ? 'gatewayUi.sub2apiInvalidUrl'
+              : form.platform === 'anthropic' ? 'gatewayUi.sub2apiClaudeUrlHint' : 'gatewayUi.sub2apiUrlHint') }}
           </p>
           <p v-else-if="baseUrlHint" class="input-hint">{{ baseUrlHint }}</p>
           <GrokBaseUrlPresets
-            v-if="form.platform === 'grok'"
+            v-if="!sub2apiPreset && form.platform === 'grok'"
             class="mt-2"
             @select="apiKeyBaseUrl = $event"
           />
@@ -1569,8 +1591,10 @@
             required
             class="input font-mono"
             :placeholder="apiKeyValuePlaceholder"
+            :autocomplete="sub2apiPreset ? 'new-password' : undefined"
           />
-          <p v-if="apiKeyHint" class="input-hint">{{ apiKeyHint }}</p>
+          <p v-if="sub2apiPreset" class="input-hint">{{ t('gatewayUi.sub2apiKeyHint') }}</p>
+          <p v-else-if="apiKeyHint" class="input-hint">{{ apiKeyHint }}</p>
         </div>
 
         <!-- 上游倍率自动探测：全部 API-key 平台可用（所在区块已限定 apikey 类型） -->
@@ -1672,6 +1696,7 @@
             <div v-if="modelRestrictionMode === 'whitelist'">
               <ModelWhitelistSelector
                 v-model="allowedModels"
+                :key="sub2apiPreset ? form.platform : undefined"
                 :model-mappings="modelMappings"
                 :platform="form.platform"
                 :sync-credentials="syncPreviewCredentials"
@@ -4147,7 +4172,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
-import { normalizeSub2APIUpstreamUrl } from '@/utils/sub2apiUpstream'
+import { normalizeSub2APIUpstreamUrl, type Sub2APIUpstreamPlatform } from '@/utils/sub2apiUpstream'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 
@@ -4330,6 +4355,7 @@ const apiKeyBaseUrlPlaceholder = computed(() => {
 })
 
 const apiKeyValuePlaceholder = computed(() => {
+  if (props.sub2apiPreset) return 'sk-...'
   switch (form.platform) {
     case 'openai':
       return 'sk-proj-...'
@@ -4437,7 +4463,15 @@ const submitting = ref(false)
 const accountCategory = ref<'oauth-based' | 'apikey' | 'bedrock' | 'service_account'>('oauth-based') // UI selection for account category
 const addMethod = ref<AddMethod>('oauth') // For oauth-based: 'oauth' or 'setup-token'
 const apiKeyBaseUrl = ref('https://api.anthropic.com')
-const normalizedSub2APIBaseUrl = computed(() => normalizeSub2APIUpstreamUrl(apiKeyBaseUrl.value))
+const sub2apiPlatformOptions = [
+  { value: 'openai', label: 'OpenAI / GPT' },
+  { value: 'anthropic', label: 'Claude' },
+  { value: 'grok', label: 'Grok' }
+] as const satisfies readonly { value: Sub2APIUpstreamPlatform; label: string }[]
+const normalizedSub2APIBaseUrl = computed(() => {
+  const platform = sub2apiPlatformOptions.find(option => option.value === form.platform)?.value
+  return platform ? normalizeSub2APIUpstreamUrl(apiKeyBaseUrl.value, platform) : null
+})
 const normalizeSub2APIField = () => {
   if (props.sub2apiPreset && normalizedSub2APIBaseUrl.value) {
     apiKeyBaseUrl.value = normalizedSub2APIBaseUrl.value
@@ -5161,7 +5195,8 @@ watch(
     } else {
       resetForm()
     }
-  }
+  },
+  { immediate: props.show && props.sub2apiPreset }
 )
 
 // Sync form.type based on accountCategory, addMethod, and platform-specific type
@@ -5193,9 +5228,15 @@ watch(
 watch(
   () => form.platform,
   (newPlatform) => {
-    // A preset must never silently substitute an official provider URL.
-    if (props.show && props.sub2apiPreset) {
-      apiKeyBaseUrl.value = ''
+    const connectingSub2API = props.show && props.sub2apiPreset
+    // Keep the gateway URL, but don't carry credentials or a local group across platforms.
+    if (connectingSub2API) {
+      normalizeSub2APIField()
+      apiKeyValue.value = ''
+      form.group_ids = []
+      modelRestrictionMode.value = 'whitelist'
+      form.concurrency = newPlatform === 'grok' ? 1 : 10
+      form.load_factor = null
     } else if (isMultiProtocolApiKeyPlatform(newPlatform)) {
       const mode = newPlatform === 'opencode_go' ? openCodeAccountMode.value : accountMode.value
       apiKeyBaseUrl.value = defaultCNBaseUrl(newPlatform, mode, apiProtocol.value)
@@ -5237,7 +5278,7 @@ watch(
       antigravityModelMappings.value = []
       antigravityModelRestrictionMode.value = 'mapping'
     }
-    if (newPlatform === 'grok') {
+    if (newPlatform === 'grok' && !connectingSub2API) {
       accountCategory.value = 'oauth-based'
       addMethod.value = 'oauth'
       modelRestrictionMode.value = 'mapping'

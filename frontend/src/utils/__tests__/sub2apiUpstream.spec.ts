@@ -12,6 +12,24 @@ describe('Sub2API upstream URL', () => {
     expect(normalizeSub2APIUpstreamUrl(input)).toBe(expected)
   })
 
+  it.each([
+    ['https://upstream.example', 'https://upstream.example'],
+    ['https://upstream.example/v1', 'https://upstream.example'],
+    ['https://upstream.example/proxy/v1/messages', 'https://upstream.example/proxy'],
+    ['https://upstream.example/proxy/v1/messages/count_tokens/', 'https://upstream.example/proxy'],
+    ['https://upstream.example/proxy/v1/models', 'https://upstream.example/proxy'],
+  ])('normalizes %s for Claude without doubling /v1', (input, expected) => {
+    expect(normalizeSub2APIUpstreamUrl(input, 'anthropic')).toBe(expected)
+  })
+
+  it.each([
+    ['https://upstream.example', 'https://upstream.example/v1'],
+    ['https://upstream.example/proxy/v1/responses', 'https://upstream.example/proxy/v1'],
+    ['https://upstream.example/proxy/v1/chat/completions', 'https://upstream.example/proxy/v1'],
+  ])('normalizes %s for Grok', (input, expected) => {
+    expect(normalizeSub2APIUpstreamUrl(input, 'grok')).toBe(expected)
+  })
+
   it.each(['', 'upstream.example', 'ftp://upstream.example', 'https:///upstream.example',
     'https://user@upstream.example', 'https://upstream.example/v1?', 'https://upstream.example/#section',
   ])('rejects %s', input => {

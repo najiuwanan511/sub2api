@@ -1,7 +1,10 @@
 export default {
   "connectSub2API": "Connect upstream Sub2API",
-  "sub2apiSetupHint": "Uses the OpenAI-compatible protocol. Use an upstream API key issued for an OpenAI group, then select a matching local group. You can sync upstream models. After saving, select a model and start the connection test.",
-  "sub2apiUrlHint": "Paste the upstream site, /v1 base, or a common OpenAI endpoint. It will be normalized to a /v1 base URL.",
+  "sub2apiSetupHint": "Choose the platform matching the group bound to your upstream key. Add each upstream group separately and select a matching local group. After saving, select a model to test the connection.",
+  "sub2apiUrlHint": "Paste the API endpoint from the upstream API Keys page. It will be normalized to a /v1 base URL.",
+  "sub2apiUpstreamPlatform": "Upstream group platform",
+  "sub2apiClaudeUrlHint": "Paste the API endpoint from the upstream API Keys page without /v1. The Claude endpoint path is appended automatically.",
+  "sub2apiKeyHint": "Use the upstream API key issued for the selected group, not your sign-in password.",
   "sub2apiInvalidUrl": "Enter a full HTTP(S) URL without credentials, query parameters, or a fragment.",
   "sub2apiSaveAndTest": "Save and open test",
   "tokenSpeed": "Average Token Speed",

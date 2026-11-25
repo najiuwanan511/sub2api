@@ -1,7 +1,10 @@
 export default {
   "connectSub2API": "接入上级 Sub2API",
-  "sub2apiSetupHint": "已选 OpenAI 兼容协议。使用上级「API 密钥」中为 OpenAI 分组签发的 Key，绑定本地对应分组。可从上级同步模型；保存后会打开连通测试，由你选择模型并启动。",
-  "sub2apiUrlHint": "可粘贴站点地址、带 /v1 的地址或常用 OpenAI 接口地址，会自动整理为 /v1 Base URL。",
+  "sub2apiSetupHint": "根据上级 API 密钥绑定的分组选择平台。每个上级分组单独接入，再绑定本地对应分组。保存后可选择模型测试连通性。",
+  "sub2apiUrlHint": "粘贴上级「API 密钥」页的 API 端点，会自动整理为带 /v1 的地址。",
+  "sub2apiUpstreamPlatform": "上级分组平台",
+  "sub2apiClaudeUrlHint": "粘贴上级「API 密钥」页的 API 端点，不用加 /v1；系统会自动拼接 Claude 的接口路径。",
+  "sub2apiKeyHint": "填写上级为所选分组签发的 API Key，不是网站登录密码。",
   "sub2apiInvalidUrl": "请输入完整的 HTTP(S) 地址，不要包含账号密码、查询参数或锚点。",
   "sub2apiSaveAndTest": "保存并进入测试",
   "tokenSpeed": "平均 Token 速度",

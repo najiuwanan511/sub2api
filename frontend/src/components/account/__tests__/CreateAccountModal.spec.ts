@@ -138,9 +138,9 @@ const ModelWhitelistSelectorStub = defineComponent({
   >models</button>`,
 })
 
-function mountModal(groups: any[] = []) {
+function mountModal(groups: any[] = [], sub2apiPreset = false) {
   return mount(CreateAccountModal, {
-    props: { show: true, proxies: [], groups },
+    props: { show: true, proxies: [], groups, sub2apiPreset },
     global: {
       stubs: {
         BaseDialog: BaseDialogStub,
@@ -198,6 +198,55 @@ async function openCodexImportStep(toggleClicks = 0) {
   await wrapper.get('form#create-account-form').trigger('submit.prevent')
   return wrapper
 }
+
+describe('CreateAccountModal upstream Sub2API shortcut', () => {
+  beforeEach(() => {
+    createAccountMock.mockReset().mockResolvedValue({ id: 42 })
+    probeUpstreamBillingMock.mockReset().mockResolvedValue({})
+    syncUpstreamModelsMock.mockReset().mockResolvedValue({ models: [], metadata: {} })
+  })
+
+  it.each([
+    ['openai', 'https://gateway.example.com/proxy', 'https://gateway.example.com/proxy/v1'],
+    ['anthropic', 'https://gateway.example.com/proxy/v1/messages', 'https://gateway.example.com/proxy'],
+    ['grok', 'https://gateway.example.com/proxy/v1/chat/completions', 'https://gateway.example.com/proxy/v1'],
+  ])('creates an API-key account for %s and opens its test', async (platform, input, baseURL) => {
+    const wrapper = mountModal([], true)
+    await wrapper.get('[data-testid="sub2api-platform-' + platform + '"]').trigger('click')
+    expect(wrapper.find('[data-tour="account-form-type"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="account-api-key-base-url"]').element).toHaveProperty('value', '')
+    await wrapper.get('form input[type="text"]').setValue('Upstream account')
+    await wrapper.get('[data-testid="account-api-key-base-url"]').setValue(input)
+    await wrapper.get('form input[type="password"]').setValue('sk-upstream')
+    expect(wrapper.getComponent(ModelWhitelistSelectorStub).props('syncCredentials')).toMatchObject({
+      platform, type: 'apikey', base_url: baseURL, api_key: 'sk-upstream',
+    })
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(createAccountMock).toHaveBeenCalledTimes(1)
+    expect(createAccountMock).toHaveBeenCalledWith(expect.objectContaining({
+      platform, type: 'apikey', upstream_billing_probe_enabled: false,
+      credentials: expect.objectContaining({ base_url: baseURL, api_key: 'sk-upstream' }),
+    }))
+    expect(wrapper.emitted('testCreated')).toEqual([[42]])
+    wrapper.unmount()
+  })
+
+  it('keeps the gateway but discards the previous platform key, groups, and model filter', async () => {
+    const wrapper = mountModal([], true)
+    const baseURL = wrapper.get('[data-testid="account-api-key-base-url"]')
+    await baseURL.setValue('https://gateway.example.com/proxy/v1')
+    await wrapper.get('form input[type="password"]').setValue('sk-openai')
+    await wrapper.get('[data-testid="select-pricing-groups"]').trigger('click')
+    await wrapper.get('[data-testid="model-whitelist-selector"]').trigger('click')
+    await wrapper.get('[data-testid="sub2api-platform-anthropic"]').trigger('click')
+    expect(baseURL.element).toHaveProperty('value', 'https://gateway.example.com/proxy')
+    expect(wrapper.get('form input[type="password"]').element).toHaveProperty('value', '')
+    expect(wrapper.getComponent(GroupSelectorStub).props('modelValue')).toEqual([])
+    expect(wrapper.getComponent(ModelWhitelistSelectorStub).props('modelValue')).toEqual([])
+    wrapper.unmount()
+  })
+})
 
 describe('CreateAccountModal OpenAI long-context billing', () => {
   beforeEach(() => {
